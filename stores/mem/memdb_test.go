@@ -3,7 +3,7 @@ package mem
 import (
 	"testing"
 
-	"code.avct.io/rest/testutil/store"
+	"github.com/avct/rest/testutil/store"
 )
 
 func TestSetGet(t *testing.T) {

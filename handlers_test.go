@@ -11,9 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"code.avct.io/rest"
-	"code.avct.io/rest/stores/mem"
-	"code.avct.io/rest/testutil/model"
+	"github.com/avct/rest"
+	"github.com/avct/rest/stores/mem"
+	"github.com/avct/rest/testutil/model"
 )
 
 var client = http.Client{}

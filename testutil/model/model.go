@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"code.avct.io/rest"
+	"github.com/avct/rest"
 )
 
 // TestModel is a testing implementation of the Model interface

@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gorilla/context"
 )
@@ -263,16 +262,6 @@ func clearContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
 		context.Clear(r)
-	})
-}
-
-func logMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		res := GetResponse(r)
-		fmt.Printf("%s %s %s %v %s %s \n", r.RemoteAddr, r.Method, r.URL, res.GetStatusCode(), context.Get(r, "requestid"), time.Since(start))
-		return
 	})
 }
 

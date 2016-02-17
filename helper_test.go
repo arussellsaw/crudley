@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"code.avct.io/rest"
-	"code.avct.io/rest/stores/mem"
-	"code.avct.io/rest/testutil/model"
+	"github.com/avct/rest"
+	"github.com/avct/rest/stores/mem"
+	"github.com/avct/rest/testutil/model"
 )
 
 var knownTime = time.Unix(1417711554, 0).UTC()

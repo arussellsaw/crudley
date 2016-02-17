@@ -6,8 +6,8 @@ import (
 
 	"stablelib.com/v1/uuid"
 
-	"code.avct.io/rest"
-	"code.avct.io/rest/stores/backend/memdb"
+	"github.com/avct/rest"
+	"github.com/avct/rest/stores/backend/memdb"
 )
 
 // NewStore returns a new memstore instance

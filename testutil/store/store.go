@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"code.avct.io/rest"
+	"github.com/avct/rest"
 )
 
 // TestableStore is an interface for code generation to create store instances for testing.

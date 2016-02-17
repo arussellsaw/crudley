@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"code.avct.io/rest"
+	"github.com/avct/rest"
 )
 
 // NewStore creates a new mongodb backed rest.Store

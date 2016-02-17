@@ -59,7 +59,7 @@ func (p *Path) Handle(path string, h HandlerFunc, method ...string) {
 // registerPath registers a http.HandlerFunc for a route, along with the Middlewares specified for this Handler
 func (p *Path) registerPath(path string, handler http.HandlerFunc, methods ...string) {
 	var cs []alice.Constructor
-	cs = append(cs, clearContextMiddleware, p.ResponseMiddleware, logMiddleware)
+	cs = append(cs, clearContextMiddleware, p.ResponseMiddleware)
 	for _, mw := range p.Middlewares {
 		cs = append(cs, mw)
 	}
