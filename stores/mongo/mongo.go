@@ -61,7 +61,7 @@ func (c *Collection) View(id string) (rest.Model, error) {
 		return nil, fmt.Errorf("you must specify a Model id")
 	}
 	m := c.Model.New("")
-	query := c.col.Find(c.Model.New(id))
+	query := c.col.Find(idmap(id))
 	err := query.One(m)
 	if err == mgo.ErrNotFound {
 		return nil, nil
@@ -70,6 +70,10 @@ func (c *Collection) View(id string) (rest.Model, error) {
 		return nil, nil
 	}
 	return m, err
+}
+
+func idmap(id string) map[string]string {
+	return map[string]string{"_id": id}
 }
 
 // Update an existing rest.Model in the Collection

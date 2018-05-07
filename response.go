@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"stablelib.com/v1/uuid"
+	"github.com/google/uuid"
 
 	"github.com/gorilla/context"
 )
@@ -55,7 +55,7 @@ func (p *Path) ResponseMiddleware(next http.Handler) http.Handler {
 		// initialize response
 		id := uuid.New()
 		context.Set(r, "requestid", id)
-		res := &Response{ID: id, Code: http.StatusOK}
+		res := &Response{ID: id.String(), Code: http.StatusOK}
 		context.Set(r, "response", res)
 		// perform api request
 		start := time.Now()

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"stablelib.com/v1/uuid"
+	"github.com/google/uuid"
 
 	"github.com/avct/rest"
 	"github.com/avct/rest/stores/backend/memdb"
@@ -317,5 +317,5 @@ func check(mValue reflect.Value, q *Query) bool {
 }
 
 func (c *Collection) id() string {
-	return uuid.New()
+	return uuid.New().String()
 }
