@@ -81,7 +81,7 @@ func (c *Collection) Update(id string, m rest.Model) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
 	}
-	err := c.col.Update(c.Model.New(id), m)
+	err := c.col.Update(idmap(id), m)
 	if err == mgo.ErrNotFound {
 		return fmt.Errorf("Model not found")
 	}
@@ -93,7 +93,7 @@ func (c *Collection) Delete(id string) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
 	}
-	err := c.col.Remove(c.Model.New(id))
+	err := c.col.Remove(idmap(id))
 	if err == mgo.ErrNotFound {
 		return fmt.Errorf("Model not found")
 	}
