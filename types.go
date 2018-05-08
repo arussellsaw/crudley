@@ -2,6 +2,9 @@ package rest
 
 import (
 	"net/http"
+	"time"
+
+	"code.avct.io/services/rest"
 )
 
 /*
@@ -124,4 +127,41 @@ type NotFoundError string
 
 func (e NotFoundError) Error() string {
 	return string(e)
+}
+
+func NewBase(id string) Base {
+	return Base{ID: id, CreatedAt: time.Now()}
+}
+
+type Base struct {
+	ID        string    `bson:"_id,omitempty"`
+	CreatedAt time.Time `bson:"created_at,omitempty"`
+	Deleted   bool      `bson:"deleted,omitempty"`
+	DeletedAt time.Time `bson:"deleted_at,omitempty"`
+}
+
+// New creates a new Base model, you should override this on your parent struct, but call it
+// when initialising the embedded Base `return MyCoolModel{Base:c.Base.New(id)}`
+func (b *Base) New(id string) rest.Model {
+	nb := NewBase(id)
+	return &nb
+}
+
+// GetName should be overridden to return the name of your collection
+func (b *Base) GetName() string {
+	panic("must override Name() on Base model")
+	return "base"
+}
+
+func (b *Base) PrimaryKey() string {
+	return b.ID
+}
+
+func (b *Base) Delete() {
+	b.Deleted = true
+	b.DeletedAt = time.Now()
+}
+
+func (b *Base) IsDeleted() bool {
+	return b.Deleted
 }
