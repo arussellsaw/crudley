@@ -9,18 +9,18 @@ import (
 
 // TestableStore is an interface for code generation to create store instances for testing.
 type TestableStore interface {
-	NewTestingStore() (rest.Store, error)
+	NewTestingStore() (crudley.Store, error)
 	CleanUp()
 }
 
-func TestSetGet(store rest.Store, t *testing.T) {
+func TestSetGet(store crudley.Store, t *testing.T) {
 	var model = &TestModel{}
 	col, err := store.Collection(model)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID string
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		modelID = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
@@ -43,27 +43,27 @@ func TestSetGet(store rest.Store, t *testing.T) {
 	}
 }
 
-func TestScan(store rest.Store, t *testing.T) {
+func TestScan(store crudley.Store, t *testing.T) {
 	var model = &TestModel{}
 	col, err := store.Collection(model)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID1, modelID2 string
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID1 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		return md, nil
 	})
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID2 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
 		return md, nil
 	})
-	var out = make(map[string]rest.Model)
-	col.Scan(func(mdl rest.Model) error {
+	var out = make(map[string]crudley.Model)
+	col.Scan(func(mdl crudley.Model) error {
 		out[mdl.PrimaryKey()] = mdl
 		return nil
 	})
@@ -86,14 +86,14 @@ func TestScan(store rest.Store, t *testing.T) {
 	}
 }
 
-func TestUpdate(store rest.Store, t *testing.T) {
+func TestUpdate(store crudley.Store, t *testing.T) {
 	var model = &TestModel{}
 	col, err := store.Collection(model)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID string
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
@@ -128,27 +128,27 @@ func TestUpdate(store rest.Store, t *testing.T) {
 	}
 }
 
-func TestSearch(store rest.Store, t *testing.T) {
+func TestSearch(store crudley.Store, t *testing.T) {
 	var model = &TestModel{}
 	col, err := store.Collection(model)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID1, modelID2 string
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID1 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		return md, nil
 	})
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID2 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
 		return md, nil
 	})
 	var out *TestModel
-	col.Search(&TestModel{Val: "testing123"}, func(mdl rest.Model) error {
+	col.Search(&TestModel{Val: "testing123"}, func(mdl crudley.Model) error {
 		out = mdl.(*TestModel)
 		return nil
 	})
@@ -157,14 +157,14 @@ func TestSearch(store rest.Store, t *testing.T) {
 	}
 }
 
-func TestQuery(store rest.Store, t *testing.T) {
+func TestQuery(store crudley.Store, t *testing.T) {
 	var model = &TestModel{}
 	col, err := store.Collection(model)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID1, modelID2 string
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID1 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
@@ -172,7 +172,7 @@ func TestQuery(store rest.Store, t *testing.T) {
 		md.(*TestModel).EmbeddedField = "embed"
 		return md, nil
 	})
-	col.Create(func(id string) (rest.Model, error) {
+	col.Create(func(id string) (crudley.Model, error) {
 		modelID2 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
@@ -219,7 +219,7 @@ type Embedded struct {
 	EmbeddedField string `json:"embedded_field" bson:"embedded_field,omitempty"`
 }
 
-func (m *TestModel) New(id string) rest.Model {
+func (m *TestModel) New(id string) crudley.Model {
 	return &TestModel{ID: id}
 }
 

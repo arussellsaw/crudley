@@ -9,8 +9,8 @@ import (
 	"github.com/arussellsaw/crudley"
 )
 
-// NewStore creates a new mongodb backed rest.Store
-func NewStore(hosts, database, user, pass string) (rest.Store, error) {
+// NewStore creates a new mongodb backed crudley.Store
+func NewStore(hosts, database, user, pass string) (crudley.Store, error) {
 	sess, err := mgo.Dial(hosts)
 	if err != nil {
 		return nil, err
@@ -32,16 +32,16 @@ func NewStore(hosts, database, user, pass string) (rest.Store, error) {
 	return store, nil
 }
 
-// Store is a mongodb backed implementation of the rest.Store interface
+// Store is a mongodb backed implementation of the crudley.Store interface
 type Store struct {
 	session              *mgo.Session
 	db                   *mgo.Database
 	user, pass, database string
 }
 
-// Collection returns the rest.Collection from mongodb specified by the name and
-// rest.Model
-func (s *Store) Collection(m rest.Model) (rest.Collection, error) {
+// Collection returns the crudley.Collection from mongodb specified by the name and
+// crudley.Model
+func (s *Store) Collection(m crudley.Model) (crudley.Collection, error) {
 	col := s.db.C(m.GetName())
 	return &Collection{
 		col:   col,
@@ -49,14 +49,14 @@ func (s *Store) Collection(m rest.Model) (rest.Collection, error) {
 	}, nil
 }
 
-// Collection represents a rest.Collection from mongodb
+// Collection represents a crudley.Collection from mongodb
 type Collection struct {
 	col   *mgo.Collection
-	Model rest.Model
+	Model crudley.Model
 }
 
-// View retrieves a single rest.Model from the Collection
-func (c *Collection) View(id string) (rest.Model, error) {
+// View retrieves a single crudley.Model from the Collection
+func (c *Collection) View(id string) (crudley.Model, error) {
 	if id == "" {
 		return nil, fmt.Errorf("you must specify a Model id")
 	}
@@ -76,8 +76,8 @@ func idmap(id string) map[string]string {
 	return map[string]string{"_id": id}
 }
 
-// Update an existing rest.Model in the Collection
-func (c *Collection) Update(id string, m rest.Model) error {
+// Update an existing crudley.Model in the Collection
+func (c *Collection) Update(id string, m crudley.Model) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
 	}
@@ -88,7 +88,7 @@ func (c *Collection) Update(id string, m rest.Model) error {
 	return err
 }
 
-// Delete a rest.Model from the Collection
+// Delete a crudley.Model from the Collection
 func (c *Collection) Delete(id string) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
@@ -100,9 +100,9 @@ func (c *Collection) Delete(id string) error {
 	return err
 }
 
-// Scan accepts a function to run on the serialized version of every rest.Model
+// Scan accepts a function to run on the serialized version of every crudley.Model
 // in the collection
-func (c *Collection) Scan(scanFn rest.ScannerFunc) error {
+func (c *Collection) Scan(scanFn crudley.ScannerFunc) error {
 	query := c.col.Find(bson.M{})
 	iter := query.Iter()
 	m := c.Model.New("")
@@ -116,10 +116,10 @@ func (c *Collection) Scan(scanFn rest.ScannerFunc) error {
 	return nil
 }
 
-// Search accepts a partial rest.Model as a query parameter and applies the passed
-// rest.ScannerFunc to the resulting set. This implementation supports secondary
-// indexes, so make sure the partial fields are indexed by the rest.Model.Index()
-func (c *Collection) Search(partial rest.Model, scanner rest.ScannerFunc) (int, error) {
+// Search accepts a partial crudley.Model as a query parameter and applies the passed
+// crudley.ScannerFunc to the resulting set. This implementation supports secondary
+// indexes, so make sure the partial fields are indexed by the crudley.Model.Index()
+func (c *Collection) Search(partial crudley.Model, scanner crudley.ScannerFunc) (int, error) {
 	query := c.col.Find(partial)
 	total, err := query.Count()
 	if err != nil {
@@ -137,8 +137,8 @@ func (c *Collection) Search(partial rest.Model, scanner rest.ScannerFunc) (int, 
 	return total, nil
 }
 
-// Create accepts a creation function to add a new rest.Model to the collection
-func (c *Collection) Create(createFn rest.CreaterFunc) error {
+// Create accepts a creation function to add a new crudley.Model to the collection
+func (c *Collection) Create(createFn crudley.CreaterFunc) error {
 	id := c.id()
 	m, err := createFn(id)
 	if err != nil {
@@ -147,8 +147,8 @@ func (c *Collection) Create(createFn rest.CreaterFunc) error {
 	return c.col.Insert(m)
 }
 
-// Query returns a rest.Query for building more complex queries against the Collection
-func (c *Collection) Query() rest.Query {
+// Query returns a crudley.Query for building more complex queries against the Collection
+func (c *Collection) Query() crudley.Query {
 	return &Query{
 		m:     bson.M{},
 		col:   c.col,
@@ -160,7 +160,7 @@ func (c *Collection) Query() rest.Query {
 // the provided methods to build an underlying bson.M to pass to the collection.Find()
 type Query struct {
 	m           bson.M
-	model       rest.Model
+	model       crudley.Model
 	skip, limit int
 	sort        string
 	col         *mgo.Collection
@@ -231,8 +231,8 @@ func (q *Query) Sort(by string) {
 }
 
 // Execute runs the Query
-func (q *Query) Execute() ([]rest.Model, error) {
-	mdls := []rest.Model{}
+func (q *Query) Execute() ([]crudley.Model, error) {
+	mdls := []crudley.Model{}
 	query := q.col.Find(q.m)
 	if q.limit != 0 {
 		query = query.Limit(q.limit)

@@ -2,7 +2,7 @@
 
 A toolkit for building CRUD apis on top of KV / NoSQL backends.
 
-Define Models that satisfy an interface (rest.Model), and you're ready to go.
+Define Models that satisfy an interface (crudley.Model), and you're ready to go.
 
 ```go
 package main
@@ -16,17 +16,17 @@ import (
 )
 
 type MyCoolModel struct {
-	// rest.Base implements most standard fields of the interface for you
+	// crudley.Base implements most standard fields of the interface for you
 	// if you want more control or different behaviour you can implement
 	// your own Base model
-	rest.Base `bson:",inline"`
+	crudley.Base `bson:",inline"`
 	Name string
 	Count int
 }
 
 // New creates a new instance of your model
-func (m *MyCoolModel) New(id string) rest.Model {
-	return &MyCoolModel{Base: rest.NewBase(id)}
+func (m *MyCoolModel) New(id string) crudley.Model {
+	return &MyCoolModel{Base: crudley.NewBase(id)}
 }
 
 // GetName returns the name of your model for database tables/collections
@@ -36,7 +36,7 @@ func (m *MyCoolModel) GetName() string {
 
 func main() {
 	r := mux.NewRouter()
-	jobPath := rest.Path{
+	jobPath := crudley.Path{
 		Model: &MyCoolModel{},
 		Store: mem.NewStore(),
 		Router: r,

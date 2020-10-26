@@ -179,7 +179,7 @@ func fillStructFields(key string, val string, mValue reflect.Value) error {
 }
 
 // UnmarshalGetQuery parses the parameters of a GET request, and applies them as
-// Predicates for a rest.Query
+// Predicates for a crudley.Query
 func UnmarshalGetQuery(r *http.Request, m Model, q Query) error {
 	var operators = make(map[string]string)
 	newURL := *r.URL

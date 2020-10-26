@@ -18,7 +18,7 @@ type TestModel struct {
 }
 
 // New creates a new TestModel with the ID set
-func (m *TestModel) New(id string) rest.Model {
+func (m *TestModel) New(id string) crudley.Model {
 	return &TestModel{ID: id}
 }
 
@@ -49,8 +49,8 @@ type TestModelResponse struct {
 	Errors  []string
 }
 
-// MarshalTestModelResponse marshals the rest.Resposne into a TestModelResponse json
-func MarshalTestModelResponse(res *rest.Response) ([]byte, error) {
+// MarshalTestModelResponse marshals the crudley.Resposne into a TestModelResponse json
+func MarshalTestModelResponse(res *crudley.Response) ([]byte, error) {
 	tmr := &TestModelResponse{}
 	for _, mdl := range res.Models {
 		tmdl, ok := mdl.(*TestModel)

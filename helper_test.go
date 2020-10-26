@@ -26,7 +26,7 @@ func TestUnmarshalQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	err = rest.UnmarshalQuery(r, m)
+	err = crudley.UnmarshalQuery(r, m)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -34,7 +34,7 @@ func TestUnmarshalQuery(t *testing.T) {
 		StringVal: "testing",
 		IntVal:    30,
 		TimeVal:   knownTime,
-		BoolVal:   rest.TruePtr(),
+		BoolVal:   crudley.TruePtr(),
 	}
 	if !reflect.DeepEqual(m, tm) {
 		mout, err := json.MarshalIndent(m, "", "  ")
@@ -60,7 +60,7 @@ func TestUnmarshalMultiQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdls, err := rest.UnmarshalMultiQuery(r, m)
+	mdls, err := crudley.UnmarshalMultiQuery(r, m)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -71,7 +71,7 @@ func TestUnmarshalMultiQuery(t *testing.T) {
 		StringVal: "testing",
 		IntVal:    30,
 		TimeVal:   knownTime,
-		BoolVal:   rest.TruePtr(),
+		BoolVal:   crudley.TruePtr(),
 	}
 	m2 := &model.TestModel{
 		StringVal: "test2",
@@ -106,19 +106,19 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		m := &model.TestModel{
 			ID:        id,
 			StringVal: "model1",
 			IntVal:    5,
-			BoolVal:   rest.TruePtr(),
+			BoolVal:   crudley.TruePtr(),
 		}
 		return m, nil
 	})
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		m := &model.TestModel{
 			ID:        id,
 			StringVal: "model2",
@@ -134,7 +134,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	q := col.Query()
-	err = rest.UnmarshalGetQuery(r, &model.TestModel{}, q)
+	err = crudley.UnmarshalGetQuery(r, &model.TestModel{}, q)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -161,7 +161,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	q = col.Query()
-	err = rest.UnmarshalGetQuery(r, &model.TestModel{}, q)
+	err = crudley.UnmarshalGetQuery(r, &model.TestModel{}, q)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -188,7 +188,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	q = col.Query()
-	err = rest.UnmarshalGetQuery(r, &model.TestModel{}, q)
+	err = crudley.UnmarshalGetQuery(r, &model.TestModel{}, q)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}

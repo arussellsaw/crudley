@@ -49,7 +49,7 @@ func (p *Path) Register() {
 	}
 }
 
-// Handle registers a custom rest.HandlerFunc for the specified path and method
+// Handle registers a custom crudley.HandlerFunc for the specified path and method
 func (p *Path) Handle(path string, h HandlerFunc, method ...string) {
 	p.registerPath(path, func(w http.ResponseWriter, r *http.Request) {
 		h(p, w, r)

@@ -18,7 +18,7 @@ import (
 
 var client = http.Client{}
 
-func setUpTestPath() (*rest.Path, error) {
+func setUpTestPath() (*crudley.Path, error) {
 	store := mem.NewStore()
 	col, err := store.Collection(&model.TestModel{})
 	if err != nil {
@@ -51,7 +51,7 @@ func setUpTestPath() (*rest.Path, error) {
 		},
 	}
 	for _, mdl := range testModels {
-		err := col.Create(func(id string) (rest.Model, error) {
+		err := col.Create(func(id string) (crudley.Model, error) {
 			mdl.ID = id
 			return mdl, nil
 		})
@@ -60,7 +60,7 @@ func setUpTestPath() (*rest.Path, error) {
 		}
 	}
 	r := mux.NewRouter()
-	p := &rest.Path{
+	p := &crudley.Path{
 		Store:           store,
 		Model:           &model.TestModel{},
 		Permit:          []string{"GET", "POST", "PUT", "DELETE"},
@@ -118,7 +118,7 @@ func TestGETID(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel"}, nil
 	})
@@ -188,7 +188,7 @@ func TestPUT(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel", IntVal: 45}, nil
 	})
@@ -228,7 +228,7 @@ func TestDELETE(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (rest.Model, error) {
+	err = col.Create(func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel"}, nil
 	})

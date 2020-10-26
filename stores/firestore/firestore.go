@@ -4,14 +4,17 @@ import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/arussellsaw/crudley"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
+	"strings"
+	"time"
 )
 
-var _ rest.Store = &Store{}
+var _ crudley.Store = &Store{}
 
-func NewStore(ctx context.Context, projectID string) (rest.Store, error) {
+func NewStore(ctx context.Context, projectID string) (crudley.Store, error) {
 	var err error
 	fs, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
@@ -29,7 +32,7 @@ type Store struct {
 	ctx context.Context
 }
 
-func (s *Store) Collection(m rest.Model) (rest.Collection, error) {
+func (s *Store) Collection(m crudley.Model) (crudley.Collection, error) {
 	return &Collection{
 		col:   s.c.Collection(m.GetName()),
 		ctx:   s.ctx,
@@ -39,11 +42,11 @@ func (s *Store) Collection(m rest.Model) (rest.Collection, error) {
 
 type Collection struct {
 	col   *firestore.CollectionRef
-	Model rest.Model
+	Model crudley.Model
 	ctx   context.Context
 }
 
-func (c *Collection) View(id string) (rest.Model, error) {
+func (c *Collection) View(id string) (crudley.Model, error) {
 	ds, err := c.col.Doc(id).Get(c.ctx)
 	if err != nil {
 		return nil, err
@@ -56,7 +59,7 @@ func (c *Collection) View(id string) (rest.Model, error) {
 	return m, nil
 }
 
-func (c *Collection) Update(id string, m rest.Model) error {
+func (c *Collection) Update(id string, m crudley.Model) error {
 	_, err := c.col.Doc(id).Set(c.ctx, m)
 	return err
 }
@@ -66,7 +69,7 @@ func (c *Collection) Delete(id string) error {
 	return err
 }
 
-func (c *Collection) Scan(fn rest.ScannerFunc) error {
+func (c *Collection) Scan(fn crudley.ScannerFunc) error {
 	iter := c.col.Documents(c.ctx)
 	for {
 		doc, err := iter.Next()
@@ -89,20 +92,127 @@ func (c *Collection) Scan(fn rest.ScannerFunc) error {
 	return nil
 }
 
-func (c *Collection) Create(fn rest.CreaterFunc) error {
+func (c *Collection) Create(fn crudley.CreaterFunc) error {
 	id := uuid.New().String()
 	m, err := fn(id)
 	if err != nil {
 		return err
 	}
-	_, err = c.col.Doc(id).Set(ctx, m)
+	_, err = c.col.Doc(id).Set(c.ctx, m)
 	return err
 }
 
-func (c *Collection) Search(m rest.Model, fn rest.ScannerFunc) (int, error) {
+func (c *Collection) Search(m crudley.Model, fn crudley.ScannerFunc) (int, error) {
 	return 0, errors.New("not implemented")
 }
 
-func (c *Collection) Query() rest.Query {
-	return nil
+func (c *Collection) Query() crudley.Query {
+	return &Query{
+		col:   c.col,
+		ctx:   c.ctx,
+		Model: c.Model,
+		q:     c.col.Query,
+	}
+}
+
+type Query struct {
+	col   *firestore.CollectionRef
+	Model crudley.Model
+	ctx   context.Context
+	q     firestore.Query
+}
+
+func (q *Query) Equal(key string, val interface{}) {
+	fmt.Println(key, val)
+	q.q = q.q.Where(key, "==", val)
+}
+
+func (q *Query) NotEqual(key string, val interface{}) {
+	q.q = q.q.Where(key, "!=", val)
+}
+
+func (q *Query) GreaterThan(key string, val interface{}) {
+	q.q = q.q.Where(key, ">", val)
+}
+
+func (q *Query) LessThan(key string, val interface{}) {
+	q.q = q.q.Where(key, "<", val)
+}
+
+func (q *Query) Limit(n int) {
+	q.q = q.q.Limit(n)
+}
+
+func (q *Query) Skip(n int) {
+	q.q = q.q.Offset(n)
+}
+
+func (q *Query) Has(key string) {
+	// this will only match on values where the field exists, so should satisfy the API
+	q.q = q.q.Where(key, "not-in", "i really hope this value doesnt exist") // yikes
+}
+
+func (q *Query) Sort(by string) {
+	field := strings.TrimPrefix(by, "-")
+	sort := firestore.Desc
+	if strings.HasPrefix("by", "-") {
+		sort = firestore.Asc
+	}
+	q.q = q.q.OrderBy(field, sort)
+}
+
+func (q *Query) Execute() ([]crudley.Model, error) {
+	out := []crudley.Model{}
+	iter := q.q.Documents(q.ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		m := q.Model.New("")
+		err = doc.DataTo(m)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+func NewBase(id string) Base {
+	return Base{ID: id, Created: time.Now()}
+}
+
+type Base struct {
+	ID      string    `firestore:"id,omitempty" json:"id,omitempty"`
+	Created time.Time `firestore:"createdt,omitempty" json:"created,omitempty"`
+	Deleted time.Time `firestore:"deletedt,omitempty" json:"deleted,omitempty"`
+}
+
+// New creates a new Base model, you should override this on your parent struct, but call it
+// when initialising the embedded Base `return MyCoolModel{Base:c.Base.New(id)}`
+func (b *Base) New(id string) crudley.Model {
+	nb := NewBase(id)
+	return &nb
+}
+
+// GetName should be overridden to return the name of your collection
+func (b *Base) GetName() string {
+	panic("must override Name() on Base model")
+	return "base"
+}
+
+func (b *Base) PrimaryKey() string {
+	return b.ID
+}
+
+func (b *Base) Delete() {
+	b.Deleted = time.Now()
+}
+
+func (b *Base) IsDeleted() bool {
+	return !b.Deleted.IsZero()
 }
