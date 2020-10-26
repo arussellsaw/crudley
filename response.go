@@ -1,4 +1,4 @@
-package rest
+package crudley
 
 import (
 	"encoding/json"

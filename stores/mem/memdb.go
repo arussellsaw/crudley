@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/avct/rest"
-	"github.com/avct/rest/stores/backend/memdb"
+	"github.com/arussellsaw/crudley"
+	"github.com/arussellsaw/crudley/stores/backend/memdb"
 )
 
 // NewStore returns a new memstore instance

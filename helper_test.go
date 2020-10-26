@@ -1,4 +1,4 @@
-package rest_test
+package crudley_test
 
 import (
 	"encoding/json"
@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avct/rest"
-	"github.com/avct/rest/stores/mem"
-	"github.com/avct/rest/testutil/model"
+	"github.com/arussellsaw/crudley"
+	"github.com/arussellsaw/crudley/stores/mem"
+	"github.com/arussellsaw/crudley/testutil/model"
 )
 
 var knownTime = time.Unix(1417711554, 0).UTC()

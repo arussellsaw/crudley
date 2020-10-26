@@ -1,4 +1,4 @@
-package rest_test
+package crudley_test
 
 import (
 	"bytes"
@@ -11,9 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/avct/rest"
-	"github.com/avct/rest/stores/mem"
-	"github.com/avct/rest/testutil/model"
+	"github.com/arussellsaw/crudley"
+	"github.com/arussellsaw/crudley/stores/mem"
+	"github.com/arussellsaw/crudley/testutil/model"
 )
 
 var client = http.Client{}

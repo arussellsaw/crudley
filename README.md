@@ -10,8 +10,8 @@ package main
 import (
 	"http"
 
-	"github.com/avct/rest"
-	"github.com/avct/rest/stores/mem"
+	"github.com/arussellsaw/crudley"
+	"github.com/arussellsaw/crudley/stores/mem"
 	"github.com/gorilla/mux"
 )
 

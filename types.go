@@ -1,10 +1,8 @@
-package rest
+package crudley
 
 import (
 	"net/http"
 	"time"
-
-	"code.avct.io/services/rest"
 )
 
 /*
@@ -134,15 +132,15 @@ func NewBase(id string) Base {
 }
 
 type Base struct {
-	ID        string    `bson:"_id,omitempty"`
-	CreatedAt time.Time `bson:"created_at,omitempty"`
-	Deleted   bool      `bson:"deleted,omitempty"`
-	DeletedAt time.Time `bson:"deleted_at,omitempty"`
+	ID        string    `bson:"_id,omitempty" json:"id,omitempty"`
+	CreatedAt time.Time `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	Deleted   bool      `bson:"deleted,omitempty" json:"deleted,omitempty"`
+	DeletedAt time.Time `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 }
 
 // New creates a new Base model, you should override this on your parent struct, but call it
 // when initialising the embedded Base `return MyCoolModel{Base:c.Base.New(id)}`
-func (b *Base) New(id string) rest.Model {
+func (b *Base) New(id string) Model {
 	nb := NewBase(id)
 	return &nb
 }
