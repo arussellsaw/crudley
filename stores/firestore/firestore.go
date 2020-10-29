@@ -155,9 +155,9 @@ func (q *Query) Has(key string) {
 
 func (q *Query) Sort(by string) {
 	field := strings.TrimPrefix(by, "-")
-	sort := firestore.Desc
+	sort := firestore.Asc
 	if strings.HasPrefix(by, "-") {
-		sort = firestore.Asc
+		sort = firestore.Desc
 	}
 	q.q = q.q.OrderBy(field, sort)
 }
