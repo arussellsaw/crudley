@@ -4,7 +4,6 @@ import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/arussellsaw/crudley"
 	"github.com/google/uuid"
 	"google.golang.org/api/iterator"
@@ -60,6 +59,9 @@ func (c *Collection) View(id string) (crudley.Model, error) {
 }
 
 func (c *Collection) Update(id string, m crudley.Model) error {
+	// TODO: right now this overwrites all fields so updates must contain
+	// the whole model to not blank fields. i think i can iterate over non-empty
+	// struct fields using fatih/structs to only update non-zero fields, but i'll do that later
 	_, err := c.col.Doc(id).Set(c.ctx, m)
 	return err
 }
@@ -123,7 +125,6 @@ type Query struct {
 }
 
 func (q *Query) Equal(key string, val interface{}) {
-	fmt.Println(key, val)
 	q.q = q.q.Where(key, "==", val)
 }
 
@@ -155,7 +156,7 @@ func (q *Query) Has(key string) {
 func (q *Query) Sort(by string) {
 	field := strings.TrimPrefix(by, "-")
 	sort := firestore.Desc
-	if strings.HasPrefix("by", "-") {
+	if strings.HasPrefix(by, "-") {
 		sort = firestore.Asc
 	}
 	q.q = q.q.OrderBy(field, sort)
