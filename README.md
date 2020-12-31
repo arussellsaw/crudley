@@ -46,9 +46,9 @@ type MyCoolModel struct {
     // crudley.Base implements most standard fields of the interface for you
     // if you want more control or different behaviour you can implement
     // your own Base model
-    crudley.Base `bson:",inline"`
+    crudley.Base
     Name string
-    Count int
+    Count int `rest:"immutable"` 
 }
 
 // New creates a new instance of your model

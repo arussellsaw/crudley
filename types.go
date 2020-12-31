@@ -90,8 +90,8 @@ func NewBase(id string) Base {
 }
 
 type Base struct {
-	ID        string    `bson:"_id,omitempty" json:"id,omitempty"`
-	CreatedAt time.Time `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	ID        string    `bson:"_id,omitempty" json:"id,omitempty" rest:"immutable"`
+	CreatedAt time.Time `bson:"created_at,omitempty" json:"created_at,omitempty" rest:"immutable"`
 	Deleted   bool      `bson:"deleted,omitempty" json:"deleted,omitempty"`
 	DeletedAt time.Time `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"`
 }
