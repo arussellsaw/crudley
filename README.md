@@ -43,26 +43,26 @@ import (
 )
 
 type MyCoolModel struct {
-	// crudley.Base implements most standard fields of the interface for you
-	// if you want more control or different behaviour you can implement
-	// your own Base model
-	crudley.Base `bson:",inline"`
-	Name string
-	Count int
+    // crudley.Base implements most standard fields of the interface for you
+    // if you want more control or different behaviour you can implement
+    // your own Base model
+    crudley.Base `bson:",inline"`
+    Name string
+    Count int
 }
 
 // New creates a new instance of your model
 func (m *MyCoolModel) New(id string) crudley.Model {
-	return &MyCoolModel{Base: crudley.NewBase(id)}
+    return &MyCoolModel{Base: crudley.NewBase(id)}
 }
 
 // GetName returns the name of your model for database tables/collections
 func (m *MyCoolModel) GetName() string {
-	return "mycoolmodel"
+    return "mycoolmodel"
 }
 
 func main() {
-	r := mux.NewRouter()
+    r := mux.NewRouter()
     s := mem.NewStore()
     r.PathPrefix("/api/cool-model/").
         Handler(
@@ -70,8 +70,7 @@ func main() {
             crudley.NewPath(&MyCoolModel{}, s),
         ),
     )
-
-	http.ListenAndServe(":3000", r)
+    
+    http.ListenAndServe(":3000", r)
 }
 ```
-
