@@ -1,53 +1,41 @@
 package main
 
 import (
-	"context"
 	"github.com/arussellsaw/crudley"
 	"github.com/arussellsaw/crudley/stores/firestore"
+	"github.com/arussellsaw/crudley/stores/mem"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"time"
 )
 
-// a little example for using this framework with the firestore backend
+// a little example for using this framework
 // some example requests:
-// note: you'll need gcloud SDK set up and pointed at
-// the incdnt project for this to work
 //
 // get a list of all incidents
-// curl localhost:3000/incidents |jq
+// curl localhost:3000/incident |jq
 //
 // get an incident by ID
-// curl localhost:3000/incidents/incident_1320757205649702912 | jq
+// curl localhost:3000/incident/incident_1320757205649702912 | jq
 //
 // get an incident by name
-// curl 'localhost:3000/incidents?name=toot-toot' |jq
+// curl 'localhost:3000/incident?name=toot-toot' |jq
 //
 // rename an incident
-// curl -XPUT localhost:3000/incidents/incident_1320757205649702912 -d '{"name":"foobar"}'
+// curl -XPUT localhost:3000/incident/incident_1320757205649702912 -d '{"name":"foobar"}'
 
 func main() {
-	ctx := context.Background()
 
-	// first we create a crudley.Store firestore instance
-	s, err := firestore.NewStore(ctx, "incdnt")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// first we create a crudley.Store
+	s := mem.NewStore()
 
 	// next we create the path for handling all of the REST
-	// requests for this model, it will register PUT, POST, GET, DELETE
 	// handlers for CRUDing this object
 	r := mux.NewRouter()
-	incidentPath := crudley.Path{
-		Model:  &Incident{},
-		Store:  s,
-		Router: r,
-		Permit: []string{"GET", "POST", "PUT", "DELETE"},
-	}
+	p := crudley.NewPath(&Incident{}, s)
 
-	incidentPath.Register()
+	r.PathPrefix("/incident/").Handler(http.StripPrefix("/incident", p))
 
 	log.Fatal(http.ListenAndServe(":3000", r))
 }

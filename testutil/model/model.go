@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/arussellsaw/crudley"
@@ -45,20 +44,7 @@ func (m *TestModel) IsDeleted() bool {
 // TestModelResponse is a response implementation for easy testing of the http
 // handlers
 type TestModelResponse struct {
-	Results []*TestModel
-	Errors  []string
-}
-
-// MarshalTestModelResponse marshals the crudley.Resposne into a TestModelResponse json
-func MarshalTestModelResponse(res *crudley.Response) ([]byte, error) {
-	tmr := &TestModelResponse{}
-	for _, mdl := range res.Models {
-		tmdl, ok := mdl.(*TestModel)
-		if !ok {
-			continue
-		}
-		tmr.Results = append(tmr.Results, tmdl)
-	}
-	tmr.Errors = res.Errors
-	return json.Marshal(tmr)
+	RawResponse []byte
+	Models      []*TestModel
+	Errors      []string
 }

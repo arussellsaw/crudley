@@ -27,19 +27,6 @@ var (
 	}
 )
 
-// GetResponse retrieves the Response from the request's context
-func GetResponse(r *http.Request) *Response {
-	rs, found := context.GetOk(r, "response")
-	if found {
-		res, ok := rs.(*Response)
-		if ok {
-			return res
-		}
-		return nil
-	}
-	return nil
-}
-
 // UnmarshalQuery creates a Model from the query parameters of a http request.
 func UnmarshalQuery(r *http.Request, m interface{}) error {
 	mValue := reflect.ValueOf(m).Elem()

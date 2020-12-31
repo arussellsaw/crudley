@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,11 +19,11 @@ import (
 
 var client = http.Client{}
 
-func setUpTestPath() (*crudley.Path, error) {
+func setUpTestPath() (*mux.Router, *crudley.Path, error) {
 	store := mem.NewStore()
 	col, err := store.Collection(&model.TestModel{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var testModels = []*model.TestModel{
 		&model.TestModel{
@@ -56,60 +57,59 @@ func setUpTestPath() (*crudley.Path, error) {
 			return mdl, nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	r := mux.NewRouter()
-	p := &crudley.Path{
-		Store:           store,
-		Model:           &model.TestModel{},
-		Permit:          []string{"GET", "POST", "PUT", "DELETE"},
-		Router:          r,
-		MarshalResponse: model.MarshalTestModelResponse,
-	}
-	p.Register()
-	return p, nil
+	p := crudley.NewPath(&model.TestModel{}, store)
+	r.PathPrefix("/api/test/").Handler(http.StripPrefix("/api/test", p))
+
+	return r, p, nil
 }
 
-func testHandler(method, URL string, body io.Reader) (*model.TestModelResponse, error) {
+func testHandler(method, URL string, body io.Reader) (model.TestModelResponse, error) {
+	tmr := model.TestModelResponse{}
 	r, err := http.NewRequest(method, URL, body)
 	res, err := client.Do(r)
 	if err != nil {
-		return nil, err
+		return tmr, err
 	}
-	tmr := &model.TestModelResponse{}
-	err = json.NewDecoder(res.Body).Decode(tmr)
+	tmr.RawResponse, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		return tmr, err
+	}
+	err = json.Unmarshal(tmr.RawResponse, &tmr)
 	return tmr, err
 }
 
 func TestGET(t *testing.T) {
-	path, err := setUpTestPath()
+	r, _, err := setUpTestPath()
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	s := httptest.NewServer(path.Router)
+	s := httptest.NewServer(r)
 	defer s.Close()
-	tmr, err := testHandler("GET", fmt.Sprintf("%s/testmodel", s.URL), nil)
+	tmr, err := testHandler("GET", fmt.Sprintf("%s/api/test/", s.URL), nil)
 	if err != nil {
-		t.Errorf("expected nil, got %s", err)
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Results) != 6 {
-		t.Errorf("expected 6, got %v", len(tmr.Results))
+	if len(tmr.Models) != 6 {
+		t.Errorf("expected 6, got %v", len(tmr.Models))
 	}
-	tmr, err = testHandler("GET", fmt.Sprintf("%s/testmodel?string_val=model6", s.URL), nil)
+	tmr, err = testHandler("GET", fmt.Sprintf("%s/api/test/?string_val=model6", s.URL), nil)
 	if err != nil {
-		t.Errorf("expected nil, got %s", err)
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Results) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Results))
+	if len(tmr.Models) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Models))
 	}
-	if tmr.Results[0].StringVal != "model6" {
-		t.Errorf("expected model6, got %s", tmr.Results[0].StringVal)
+	if tmr.Models[0].StringVal != "model6" {
+		t.Errorf("expected model6, got %s", tmr.Models[0].StringVal)
 	}
 }
 
 func TestGETID(t *testing.T) {
-	path, err := setUpTestPath()
+	r, path, err := setUpTestPath()
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -125,39 +125,42 @@ func TestGETID(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	s := httptest.NewServer(path.Router)
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.URL.String())
+	})
+	s := httptest.NewServer(r)
 	defer s.Close()
-	tmr, err := testHandler("GET", fmt.Sprintf("%s/testmodel/%s", s.URL, mID), nil)
+	tmr, err := testHandler("GET", fmt.Sprintf("%s/api/test/%s", s.URL, mID), nil)
 	if err != nil {
-		t.Errorf("expected nil, got %s", err)
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Results) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Results))
+	if len(tmr.Models) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Models))
 	}
-	if tmr.Results[0].ID != mID {
-		t.Errorf("expected %s, got %s", mID, tmr.Results[0].ID)
+	if tmr.Models[0].ID != mID {
+		t.Errorf("expected %s, got %s", mID, tmr.Models[0].ID)
 	}
-	if tmr.Results[0].StringVal != "newmodel" {
-		t.Errorf("expected newmodel, got %s", tmr.Results[0].StringVal)
+	if tmr.Models[0].StringVal != "newmodel" {
+		t.Errorf("expected newmodel, got %s", tmr.Models[0].StringVal)
 	}
 }
 
 func TestPOST(t *testing.T) {
-	path, err := setUpTestPath()
+	r, path, err := setUpTestPath()
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	s := httptest.NewServer(path.Router)
+	s := httptest.NewServer(r)
 	defer s.Close()
 	modelBuf := `{"string_val": "test1", "int_val":3}`
-	tmr, err := testHandler("POST", fmt.Sprintf("%s/testmodel", s.URL), bytes.NewBufferString(modelBuf))
+	tmr, err := testHandler("POST", fmt.Sprintf("%s/api/test/", s.URL), bytes.NewBufferString(modelBuf))
 	if err != nil {
-		t.Errorf("expected nil, got %s", err)
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Results) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Results))
+	if len(tmr.Models) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Models))
 	}
-	id := tmr.Results[0].ID
+	id := tmr.Models[0].ID
 	col, err := path.Store.Collection(&model.TestModel{})
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
@@ -179,7 +182,7 @@ func TestPOST(t *testing.T) {
 }
 
 func TestPUT(t *testing.T) {
-	path, err := setUpTestPath()
+	r, path, err := setUpTestPath()
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -195,10 +198,10 @@ func TestPUT(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	s := httptest.NewServer(path.Router)
+	s := httptest.NewServer(r)
 	defer s.Close()
 	modelBuf := `{"string_val": "updatedmodel"}`
-	_, err = testHandler("PUT", fmt.Sprintf("%s/testmodel/%s", s.URL, mID), bytes.NewBufferString(modelBuf))
+	_, err = testHandler("PUT", fmt.Sprintf("%s/api/test/%s", s.URL, mID), bytes.NewBufferString(modelBuf))
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -219,7 +222,7 @@ func TestPUT(t *testing.T) {
 }
 
 func TestDELETE(t *testing.T) {
-	path, err := setUpTestPath()
+	r, path, err := setUpTestPath()
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -235,9 +238,9 @@ func TestDELETE(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	s := httptest.NewServer(path.Router)
+	s := httptest.NewServer(r)
 	defer s.Close()
-	_, err = testHandler("DELETE", fmt.Sprintf("%s/testmodel/%s", s.URL, mID), nil)
+	_, err = testHandler("DELETE", fmt.Sprintf("%s/api/test/%s", s.URL, mID), nil)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}

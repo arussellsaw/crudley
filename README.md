@@ -1,18 +1,45 @@
-# rest
+# Crudley
 
-A toolkit for building CRUD apis on top of KV / NoSQL backends.
+Crudley is a Go library for building CRUD REST APIs on top of document stores. The goal of the project is to make it less labour intensive to build simple APIs, and allow developers to focus on building important stuff. 
 
-Define Models that satisfy an interface (crudley.Model), and you're ready to go.
+The project works by using a core `crudley.Model` interface, which provides the library with the basic functions needed to create, read, update, and delete data. The stores are also implemented via a `crudley.Store` interface, which means the database backend can easily be swapped by creating a new `crudley.Store` interface. 
+
+There are a couple of different places where the functionality of crudley, but generally i'd recommend writing bespoke API handlers if you want advanced functionality.
+
+* Hooks, these are functions called by the handlers at certain points in the request lifecycle, at the moment only `Hooks.Authorize` is supported for checking authorization.
+
+* Interfaces, pretty well everything in crudley is an interface, so many components can be extended by wrapping and embedding interfaces, overriding specific functions you want to expand on.
+
 
 ```go
+
+// a little example for using this framework
+// some example requests:
+//
+// create a record
+// curl -XPOST localhost:3000/api/cool-model/ -d '{"name":"toot-toot"}'
+//
+// get a list of all records
+// curl localhost:3000/api/cool-model/ |jq
+//
+// get a record by ID
+// curl localhost:3000/api/cool-model/{some_id} | jq
+//
+// get a record by name
+// curl 'localhost:3000/api/cool-model/?name=toot-toot' |jq
+//
+// rename a record
+// curl -XPUT localhost:3000/api/cool-model/{some_id} -d '{"name":"foobar"}'
+
 package main
 
 import (
-	"http"
+	"net/http"
+
+	"github.com/gorilla/mux"
 
 	"github.com/arussellsaw/crudley"
 	"github.com/arussellsaw/crudley/stores/mem"
-	"github.com/gorilla/mux"
 )
 
 type MyCoolModel struct {
@@ -36,16 +63,15 @@ func (m *MyCoolModel) GetName() string {
 
 func main() {
 	r := mux.NewRouter()
-	jobPath := crudley.Path{
-		Model: &MyCoolModel{},
-		Store: mem.NewStore(),
-		Router: r,
-		Permit: []string{"GET", "POST", "DELETE"},
-	}
+    s := mem.NewStore()
+    r.PathPrefix("/api/cool-model/").
+        Handler(
+            http.StripPrefix("/api/cool-model", 
+            crudley.NewPath(&MyCoolModel{}, s),
+        ),
+    )
+
 	http.ListenAndServe(":3000", r)
 }
-
 ```
-
-A lot of the concepts were designed around a target of mongodb, but practically any key value store will work well.
 

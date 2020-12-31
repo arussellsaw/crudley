@@ -1,16 +1,39 @@
 package crudley
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/justinas/alice"
 )
 
 // ID is the commonly used mux.Var id param.
 const ID = "id"
+
+func NewPath(m Model, s Store, opts ...Option) *Path {
+	p := &Path{
+		Model: m,
+		Store: s,
+	}
+
+	r := mux.NewRouter()
+	r.Path("/").Methods("GET").HandlerFunc(p.Query)
+	r.Path("/").Methods("POST").HandlerFunc(p.Post)
+	r.Path("/{id}").Methods("GET").HandlerFunc(p.Get)
+	r.Path("/{id}").Methods("PUT").HandlerFunc(p.Put)
+	r.Path("/{id}").Methods("DELETE").HandlerFunc(p.Delete)
+
+	p.r = r
+
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	return p
+}
 
 // Path manages building a set of RESTful endpoints for any given Model, using
 // the provided Store for a database backend
@@ -18,84 +41,51 @@ type Path struct {
 	Model Model
 	Store Store
 
-	MarshalResponse func(*Response) ([]byte, error)
+	r *mux.Router
 
-	// Permit defines the available handlers for the Model
-	Permit []string
-	// Router is usually passed as a mux.Router.Subrouter() to register the handlers
-	// for this Model's routes
-	Router *mux.Router
+	c Collection
 
-	Middlewares []func(http.Handler) http.Handler
-
-	Collection Collection
-	response   Response
+	Hooks Hooks
 }
 
-// Register adds routes for the model
-func (p *Path) Register() {
-	for _, method := range p.Permit {
-		switch method {
-		case "GET":
-			p.registerPath(fmt.Sprintf("/%s/{id}", p.Model.GetName()), p.Get, "GET")
-			p.registerPath(fmt.Sprintf("/%s", p.Model.GetName()), p.Query, "GET")
-		case "POST":
-			p.registerPath(fmt.Sprintf("/%s", p.Model.GetName()), p.Post, "POST")
-		case "PUT":
-			p.registerPath(fmt.Sprintf("/%s/{id}", p.Model.GetName()), p.Put, "PUT")
-		case "DELETE":
-			p.registerPath(fmt.Sprintf("/%s/{id}", p.Model.GetName()), p.Delete, "DELETE")
-		}
-	}
+type Hooks struct {
+	Authorize func(ctx context.Context, m Model, r *http.Request) error
 }
 
-// Handle registers a custom crudley.HandlerFunc for the specified path and method
-func (p *Path) Handle(path string, h HandlerFunc, method ...string) {
-	p.registerPath(path, func(w http.ResponseWriter, r *http.Request) {
-		h(p, w, r)
-	}, method...)
-}
+type Option func(p *Path)
 
-// registerPath registers a http.HandlerFunc for a route, along with the Middlewares specified for this Handler
-func (p *Path) registerPath(path string, handler http.HandlerFunc, methods ...string) {
-	var cs []alice.Constructor
-	cs = append(cs, clearContextMiddleware, p.ResponseMiddleware)
-	for _, mw := range p.Middlewares {
-		cs = append(cs, mw)
-	}
-	chain := alice.New(cs...).Then(handler)
-	p.Router.Handle(path, chain).Methods(methods...)
+func (p *Path) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p.r.ServeHTTP(w, r)
 }
 
 // InitHandler ensures the collection is initialized for the path, and retrieves
 // the response for the request
-func (p *Path) InitHandler(w http.ResponseWriter, r *http.Request) (*Response, error) {
-	res := GetResponse(r)
-	if res == nil {
-		http.Error(w, "could not build api response", http.StatusInternalServerError)
-		return res, fmt.Errorf("could not retrieve api response")
-	}
-	var err error
-
-	if p.Collection == nil {
-		p.Collection, err = p.Store.Collection(p.Model)
-		if err != nil {
-			res.AddError(fmt.Errorf("failed to retrieve Collection: %s", err.Error()))
-			res.SetStatusCode(http.StatusInternalServerError)
-			return res, fmt.Errorf("failed to init collection")
+func (p *Path) initHandler() (Collection, *Response, error) {
+	var (
+		res = &Response{
+			ID: uuid.New().String(),
 		}
+		err error
+	)
+
+	c, err := p.Store.Collection(p.Model)
+	if err != nil {
+		res.AddError(fmt.Errorf("failed to retrieve Collection: %s", err.Error()))
+		res.SetStatusCode(http.StatusInternalServerError)
+		return nil, nil, fmt.Errorf("failed to init collection")
 	}
-	return res, nil
+	return c, res, nil
 }
 
 // Query accepts a partial model and looks up the result
 func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
-	res, err := p.InitHandler(w, r)
+	c, res, err := p.initHandler()
 	if err != nil {
 		return
 	}
+	defer WriteResponse(w, res)
 	out := p.Model.New("")
-	q := p.Collection.Query()
+	q := c.Query()
 	err = UnmarshalGetQuery(r, out, q)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to build Query: %s", err.Error()))
@@ -109,13 +99,13 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, m := range models {
-		if !m.IsDeleted() {
-			pm, ok := m.(Permissioner)
-			if ok {
-				if !pm.Permissions(r) {
-					continue
-				}
+		// this is probably bad
+		if p.Hooks.Authorize != nil {
+			if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
+				continue
 			}
+		}
+		if !m.IsDeleted() {
 			res.AddModel(m)
 		}
 	}
@@ -123,10 +113,11 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 
 // Get is the http handler for the GET method
 func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
-	res, err := p.InitHandler(w, r)
+	c, res, err := p.initHandler()
 	if err != nil {
 		return
 	}
+	defer WriteResponse(w, res)
 
 	vars := mux.Vars(r)
 	id, ok := vars[ID]
@@ -136,7 +127,7 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	model, err := p.Collection.View(id)
+	model, err := c.View(id)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to retrieve Model from collection: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
@@ -147,15 +138,12 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 		res.SetStatusCode(http.StatusNotFound)
 		return
 	}
-
-	if p, ok := model.(Permissioner); ok {
-		if !p.Permissions(r) {
-			res.AddError(ErrorForbidden)
-			res.SetStatusCode(http.StatusForbidden)
-			return
+	if p.Hooks.Authorize != nil {
+		if err := p.Hooks.Authorize(r.Context(), model, r); err != nil {
+			res.AddError(ErrorModelNotFound)
+			res.SetStatusCode(http.StatusNotFound)
 		}
 	}
-
 	if model.IsDeleted() {
 		res.AddError(ErrorModelNotFound)
 		res.SetStatusCode(http.StatusNotFound)
@@ -167,36 +155,26 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 
 // Post saves a Model to the Store
 func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
-	res, err := p.InitHandler(w, r)
+	c, res, err := p.initHandler()
 	if err != nil {
 		return
 	}
+	defer WriteResponse(w, res)
 
 	var out Model
-	var code = http.StatusOK
-	err = p.Collection.Create(func(id string) (Model, error) {
+	err = c.Create(func(id string) (Model, error) {
 		out = p.Model.New(id)
 
 		err := json.NewDecoder(r.Body).Decode(&RestrictedModel{out})
 		if err != nil {
-			code = http.StatusInternalServerError
 			return out, err
 		}
 
-		if p, ok := out.(Permissioner); ok {
-			if !p.Permissions(r) {
-				code = http.StatusForbidden
-				return out, ErrorForbidden
+		if p.Hooks.Authorize != nil {
+			if err := p.Hooks.Authorize(r.Context(), out, r); err != nil {
+				res.AddError(ErrorModelNotFound)
+				res.SetStatusCode(http.StatusNotFound)
 			}
-		}
-		if v, ok := out.(Validator); ok {
-			if err := v.Validate(p.Store); err != nil {
-				code = http.StatusBadRequest
-				return out, err
-			}
-		}
-		if pre, ok := out.(PreSaver); ok {
-			err = pre.PreSave(p.Store)
 		}
 
 		return out, err
@@ -207,23 +185,16 @@ func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post, ok := out.(PostSaver); ok {
-		err = post.PostSave(p.Store)
-		if err != nil {
-			res.AddError(err)
-			res.SetStatusCode(http.StatusInternalServerError)
-			return
-		}
-	}
 	res.AddModel(out)
 }
 
 // Put handles partial JSON to update a Model
 func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
-	res, err := p.InitHandler(w, r)
+	c, res, err := p.initHandler()
 	if err != nil {
 		return
 	}
+	defer WriteResponse(w, res)
 
 	vars := mux.Vars(r)
 	id, ok := vars[ID]
@@ -233,7 +204,7 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := p.Collection.View(id)
+	m, err := c.View(id)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			res.AddError(ErrorModelNotFound)
@@ -252,45 +223,19 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p, ok := m.(Permissioner); ok {
-		if !p.Permissions(r) {
-			res.AddError(ErrorForbidden)
-			res.SetStatusCode(http.StatusForbidden)
+	if p.Hooks.Authorize != nil {
+		if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
+			res.AddError(ErrorModelNotFound)
+			res.SetStatusCode(http.StatusNotFound)
 			return
 		}
 	}
 
-	if v, ok := m.(Validator); ok {
-		err = v.Validate(p.Store)
-		if err != nil {
-			res.AddError(ErrorValidationFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
-	}
-	if pre, ok := m.(PreSaver); ok {
-		err = pre.PreSave(p.Store)
-		if err != nil {
-			res.AddError(ErrorPreSaveFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
-	}
-
-	err = p.Collection.Update(m.PrimaryKey(), m)
+	err = c.Update(m.PrimaryKey(), m)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to update Model: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
 		return
-	}
-
-	if post, ok := m.(PostSaver); ok {
-		err = post.PostSave(p.Store)
-		if err != nil {
-			res.AddError(ErrorPostSaveFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
 	}
 
 	res.AddModel(m)
@@ -298,10 +243,11 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles deleting the Model specified by the mux var "id"
 func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
-	res, err := p.InitHandler(w, r)
+	c, res, err := p.initHandler()
 	if err != nil {
 		return
 	}
+	defer WriteResponse(w, res)
 
 	id, ok := mux.Vars(r)[ID]
 	if !ok {
@@ -310,7 +256,7 @@ func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := p.Collection.View(id)
+	m, err := c.View(id)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			res.AddError(ErrorModelNotFound)
@@ -326,48 +272,22 @@ func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if v, ok := m.(Validator); ok {
-		err = v.Validate(p.Store)
-		if err != nil {
-			res.AddError(ErrorValidationFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
-	}
-
-	if p, ok := m.(Permissioner); ok {
-		if !p.Permissions(r) {
-			res.AddError(ErrorForbidden)
-			res.SetStatusCode(http.StatusForbidden)
+	if p.Hooks.Authorize != nil {
+		if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
+			res.AddError(ErrorModelNotFound)
+			res.SetStatusCode(http.StatusNotFound)
 			return
 		}
 	}
 
 	m.Delete()
 
-	if pre, ok := m.(PreSaver); ok {
-		err = pre.PreSave(p.Store)
-		if err != nil {
-			res.AddError(ErrorPreSaveFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
-	}
-
-	err = p.Collection.Update(id, m)
+	err = c.Update(id, m)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to update Collection with deleted Model: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
 		return
 	}
 
-	if post, ok := m.(PostSaver); ok {
-		err = post.PostSave(p.Store)
-		if err != nil {
-			res.AddError(ErrorPostSaveFailed)
-			res.SetStatusCode(http.StatusBadRequest)
-			return
-		}
-	}
 	res.AddModel(m)
 }

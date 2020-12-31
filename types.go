@@ -5,20 +5,8 @@ import (
 	"time"
 )
 
-/*
-	Rest is a toolkit for building restful APIs focused on dealing with application
-	and business logic whilst avoiding dealing with messy and repettetive http/REST
-	handling.
-
-	The Store/Collection interfaces are aimed at providing swappable storage backends
-	with no code changes on actual models and application logic (though some struct
-	tags would have to be modified depending on eventual serialization format).
-*/
-
 // Model is the minimal interface your API's documents must satisfy to allow the
-// RESTful handlers to manage modification and storage. there are further optional
-// interfaces you can satisfy [PreSaver, PostSaver, Validator, Permissioner] to
-// allow more complex custom behaviours to your documents
+// RESTful handlers to manage modification and storage.
 type Model interface {
 	// New returns a new instance of the Model with the specified ID and necessary
 	// fields initialized
@@ -75,36 +63,6 @@ type Store interface {
 	// Collection retrieves the specified Collection from the Store, using the Model
 	// to unmarshal into.
 	Collection(m Model) (Collection, error)
-}
-
-// Permissioner is an optional interface that a Model can also implement, this
-// allows the Model to be restricted by custom authentication and scopes. the
-// recommended implementation is reading permissions from a value stored in the
-// request mux.context, but could also use values in the request to look up
-// permission levels from an external service.
-type Permissioner interface {
-	Permissions(*http.Request) bool
-}
-
-// Validator is an optional interface that a Model can implement. Validator is
-// used to check validity and safety of fields on the Model, such as checking
-// email fields are valid, or checking references exist.
-type Validator interface {
-	Validate(Store) error
-}
-
-// PreSaver is an optional interface that a Model can implement. PreSaver.Presave is
-// called before persisting a modified Model to the Collection. This method can be
-// used to broadcast updates via message queues, perform logging, update references etc.
-type PreSaver interface {
-	PreSave(Store) error
-}
-
-// PostSaver is an optional interface that a Model can implement. PostSaver.Postsave is
-// called after persisting a modified Model to the Collection. This method can be
-// used to broadcast updates via message queues, perform logging, update references etc.
-type PostSaver interface {
-	PostSave(Store) error
 }
 
 // ScannerFunc is used to iterate over Models for queries. they are used in the
