@@ -67,98 +67,101 @@ func fillStructFields(key string, val string, mValue reflect.Value) error {
 			fillStructFields(key, val, mFieldValue)
 		}
 		jsonTag := mFieldType.Tag.Get("json")
-		if strings.Split(jsonTag, ",")[0] == key {
-			if mFieldValue.CanSet() {
 
-				//Most of this switch statement is taken from encoding/json/decode.go
-				switch mFieldValue.Kind() {
-				default:
-					if mFieldValue.Kind() == reflect.String {
-						mFieldValue.SetString(val)
-					} else {
-						err := json.Unmarshal([]byte(fmt.Sprintf(`"%s"`, val)), mFieldValue.Addr().Interface())
-						if err != nil {
-							return err
-						}
-						return nil
-					}
-				case reflect.Interface:
-					return fmt.Errorf("interface type Model fields are not supported")
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					n, err := strconv.ParseInt(val, 10, 64)
-					if err != nil || mFieldValue.OverflowInt(n) {
-						return fmt.Errorf("failed to parse int %s: %s", key, val)
-					}
-					mFieldValue.SetInt(n)
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-					n, err := strconv.ParseUint(val, 10, 64)
-					if err != nil || mFieldValue.OverflowUint(n) {
-						return fmt.Errorf("failed to parse uint %s: %s", key, val)
-					}
-					mFieldValue.SetUint(n)
+		if strings.Split(jsonTag, ",")[0] != key {
+			continue
+		}
+		if !mFieldValue.CanSet() {
+			continue
+		}
 
-				case reflect.Float32, reflect.Float64:
-					n, err := strconv.ParseFloat(val, mFieldValue.Type().Bits())
-					if err != nil || mFieldValue.OverflowFloat(n) {
-						return fmt.Errorf("failed to parse float %s: %s", key, val)
-					}
-					mFieldValue.SetFloat(n)
-				case reflect.Bool:
-					switch strings.ToLower(val) {
-					case "true", "1":
-						mFieldValue.SetBool(true)
-					case "false", "0":
-						mFieldValue.SetBool(false)
-					default:
-						return fmt.Errorf("failed to parse bool, unrecognized value: %s", val)
-					}
-				case reflect.Ptr:
-					switch mFieldType.Type.Elem().Kind() {
-					default:
-						if mFieldValue.Kind() == reflect.String {
-							mFieldValue.SetString(val)
-						} else {
-							return fmt.Errorf("unknown query param pointer type")
-						}
-					case reflect.Bool:
-						t := reflect.New(mFieldType.Type.Elem())
-						switch strings.ToLower(val) {
-						case "true", "1":
-							t.Elem().SetBool(true)
-						case "false", "0":
-							t.Elem().SetBool(false)
-						default:
-							return fmt.Errorf("failed to parse bool, unrecognized value: %s", val)
-						}
-						mFieldValue.Set(t)
-					case reflect.Interface:
-						return fmt.Errorf("interface type Model fields are not supported")
-					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-						t := reflect.New(mFieldType.Type.Elem())
-						n, err := strconv.ParseInt(val, 10, 64)
-						if err != nil || mFieldValue.OverflowInt(n) {
-							return fmt.Errorf("failed to parse int %s: %s", key, val)
-						}
-						t.SetInt(n)
-						mFieldValue.Set(t)
-					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-						t := reflect.New(mFieldType.Type.Elem())
-						n, err := strconv.ParseUint(val, 10, 64)
-						if err != nil || mFieldValue.OverflowUint(n) {
-							return fmt.Errorf("failed to parse uint %s: %s", key, val)
-						}
-						t.SetUint(n)
-						mFieldValue.Set(t)
-					case reflect.Float32, reflect.Float64:
-						t := reflect.New(mFieldType.Type.Elem())
-						n, err := strconv.ParseFloat(val, mFieldValue.Type().Bits())
-						if err != nil || mFieldValue.OverflowFloat(n) {
-							return fmt.Errorf("failed to parse float %s: %s", key, val)
-						}
-						t.Elem().SetFloat(n)
-						mFieldValue.Set(t)
-					}
+		//Most of this switch statement is taken from encoding/json/decode.go
+		switch mFieldValue.Kind() {
+		default:
+			if mFieldValue.Kind() == reflect.String {
+				mFieldValue.SetString(val)
+			} else {
+				err := json.Unmarshal([]byte(fmt.Sprintf(`"%s"`, val)), mFieldValue.Addr().Interface())
+				if err != nil {
+					return err
 				}
+				return nil
+			}
+		case reflect.Interface:
+			return fmt.Errorf("interface type Model fields are not supported")
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			n, err := strconv.ParseInt(val, 10, 64)
+			if err != nil || mFieldValue.OverflowInt(n) {
+				return fmt.Errorf("failed to parse int %s: %s", key, val)
+			}
+			mFieldValue.SetInt(n)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			n, err := strconv.ParseUint(val, 10, 64)
+			if err != nil || mFieldValue.OverflowUint(n) {
+				return fmt.Errorf("failed to parse uint %s: %s", key, val)
+			}
+			mFieldValue.SetUint(n)
+
+		case reflect.Float32, reflect.Float64:
+			n, err := strconv.ParseFloat(val, mFieldValue.Type().Bits())
+			if err != nil || mFieldValue.OverflowFloat(n) {
+				return fmt.Errorf("failed to parse float %s: %s", key, val)
+			}
+			mFieldValue.SetFloat(n)
+		case reflect.Bool:
+			switch strings.ToLower(val) {
+			case "true", "1":
+				mFieldValue.SetBool(true)
+			case "false", "0":
+				mFieldValue.SetBool(false)
+			default:
+				return fmt.Errorf("failed to parse bool, unrecognized value: %s", val)
+			}
+		case reflect.Ptr:
+			switch mFieldType.Type.Elem().Kind() {
+			default:
+				if mFieldValue.Kind() == reflect.String {
+					mFieldValue.SetString(val)
+				} else {
+					return fmt.Errorf("unknown query param pointer type")
+				}
+			case reflect.Bool:
+				t := reflect.New(mFieldType.Type.Elem())
+				switch strings.ToLower(val) {
+				case "true", "1":
+					t.Elem().SetBool(true)
+				case "false", "0":
+					t.Elem().SetBool(false)
+				default:
+					return fmt.Errorf("failed to parse bool, unrecognized value: %s", val)
+				}
+				mFieldValue.Set(t)
+			case reflect.Interface:
+				return fmt.Errorf("interface type Model fields are not supported")
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				t := reflect.New(mFieldType.Type.Elem())
+				n, err := strconv.ParseInt(val, 10, 64)
+				if err != nil || mFieldValue.OverflowInt(n) {
+					return fmt.Errorf("failed to parse int %s: %s", key, val)
+				}
+				t.SetInt(n)
+				mFieldValue.Set(t)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				t := reflect.New(mFieldType.Type.Elem())
+				n, err := strconv.ParseUint(val, 10, 64)
+				if err != nil || mFieldValue.OverflowUint(n) {
+					return fmt.Errorf("failed to parse uint %s: %s", key, val)
+				}
+				t.SetUint(n)
+				mFieldValue.Set(t)
+			case reflect.Float32, reflect.Float64:
+				t := reflect.New(mFieldType.Type.Elem())
+				n, err := strconv.ParseFloat(val, mFieldValue.Type().Bits())
+				if err != nil || mFieldValue.OverflowFloat(n) {
+					return fmt.Errorf("failed to parse float %s: %s", key, val)
+				}
+				t.Elem().SetFloat(n)
+				mFieldValue.Set(t)
 			}
 		}
 	}

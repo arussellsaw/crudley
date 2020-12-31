@@ -33,6 +33,9 @@ func setUpTestPath() (*mux.Router, *crudley.Path, error) {
 		&model.TestModel{
 			StringVal: "model2",
 			IntVal:    2,
+			StructVal: model.StructVal{
+				"foo",
+			},
 		},
 		&model.TestModel{
 			StringVal: "model3",
@@ -120,7 +123,7 @@ func TestGETID(t *testing.T) {
 	var mID string
 	err = col.Create(func(id string) (crudley.Model, error) {
 		mID = id
-		return &model.TestModel{ID: id, StringVal: "newmodel"}, nil
+		return &model.TestModel{ID: id, StringVal: "newmodel", StructVal: model.StructVal{Field: "foo"}}, nil
 	})
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
@@ -141,6 +144,9 @@ func TestGETID(t *testing.T) {
 		t.Errorf("expected %s, got %s", mID, tmr.Models[0].ID)
 	}
 	if tmr.Models[0].StringVal != "newmodel" {
+		t.Errorf("expected newmodel, got %s", tmr.Models[0].StringVal)
+	}
+	if tmr.Models[0].StructVal.Field != "foo" {
 		t.Errorf("expected newmodel, got %s", tmr.Models[0].StringVal)
 	}
 }

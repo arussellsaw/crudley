@@ -14,6 +14,11 @@ type TestModel struct {
 	IntVal    int       `json:"int_val" bson:"int_val,omitempty"`
 	BoolVal   *bool     `json:"bool_val" bson:"bool_val,omitempty"`
 	Deleted   bool      `json:"deleted" bson:"deleted,omitempty"`
+	StructVal StructVal `json:"struct_val"`
+}
+
+type StructVal struct {
+	Field string `json:"field"`
 }
 
 // New creates a new TestModel with the ID set
