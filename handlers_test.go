@@ -2,6 +2,7 @@ package crudley_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,7 +56,7 @@ func setUpTestPath() (*mux.Router, *crudley.Path, error) {
 		},
 	}
 	for _, mdl := range testModels {
-		err := col.Create(func(id string) (crudley.Model, error) {
+		err := col.Create(context.Background(), func(id string) (crudley.Model, error) {
 			mdl.ID = id
 			return mdl, nil
 		})
@@ -121,7 +122,7 @@ func TestGETID(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel", StructVal: model.StructVal{Field: "foo"}}, nil
 	})
@@ -171,7 +172,7 @@ func TestPOST(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdl, err := col.View(id)
+	mdl, err := col.View(context.Background(), id)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -197,7 +198,7 @@ func TestPUT(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel", IntVal: 45}, nil
 	})
@@ -211,7 +212,7 @@ func TestPUT(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdl, err := col.View(mID)
+	mdl, err := col.View(context.Background(), mID)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -237,7 +238,7 @@ func TestDELETE(t *testing.T) {
 		t.Errorf("expected nil, got %s", err)
 	}
 	var mID string
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		mID = id
 		return &model.TestModel{ID: id, StringVal: "newmodel"}, nil
 	})
@@ -250,7 +251,7 @@ func TestDELETE(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdl, err := col.View(mID)
+	mdl, err := col.View(context.Background(), mID)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}

@@ -34,7 +34,6 @@ type Store struct {
 func (s *Store) Collection(m crudley.Model) (crudley.Collection, error) {
 	return &Collection{
 		col:   s.c.Collection(m.GetName()),
-		ctx:   s.ctx,
 		Model: m,
 	}, nil
 }
@@ -42,11 +41,10 @@ func (s *Store) Collection(m crudley.Model) (crudley.Collection, error) {
 type Collection struct {
 	col   *firestore.CollectionRef
 	Model crudley.Model
-	ctx   context.Context
 }
 
-func (c *Collection) View(id string) (crudley.Model, error) {
-	ds, err := c.col.Doc(id).Get(c.ctx)
+func (c *Collection) View(ctx context.Context, id string) (crudley.Model, error) {
+	ds, err := c.col.Doc(id).Get(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,21 +56,21 @@ func (c *Collection) View(id string) (crudley.Model, error) {
 	return m, nil
 }
 
-func (c *Collection) Update(id string, m crudley.Model) error {
+func (c *Collection) Update(ctx context.Context, id string, m crudley.Model) error {
 	// TODO: right now this overwrites all fields so updates must contain
 	// the whole model to not blank fields. i think i can iterate over non-empty
 	// struct fields using fatih/structs to only update non-zero fields, but i'll do that later
-	_, err := c.col.Doc(id).Set(c.ctx, m)
+	_, err := c.col.Doc(id).Set(ctx, m)
 	return err
 }
 
-func (c *Collection) Delete(id string) error {
-	_, err := c.col.Doc(id).Delete(c.ctx)
+func (c *Collection) Delete(ctx context.Context, id string) error {
+	_, err := c.col.Doc(id).Delete(ctx)
 	return err
 }
 
-func (c *Collection) Scan(fn crudley.ScannerFunc) error {
-	iter := c.col.Documents(c.ctx)
+func (c *Collection) Scan(ctx context.Context, fn crudley.ScannerFunc) error {
+	iter := c.col.Documents(ctx)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -94,24 +92,23 @@ func (c *Collection) Scan(fn crudley.ScannerFunc) error {
 	return nil
 }
 
-func (c *Collection) Create(fn crudley.CreaterFunc) error {
+func (c *Collection) Create(ctx context.Context, fn crudley.CreaterFunc) error {
 	id := uuid.New().String()
 	m, err := fn(id)
 	if err != nil {
 		return err
 	}
-	_, err = c.col.Doc(id).Set(c.ctx, m)
+	_, err = c.col.Doc(id).Set(ctx, m)
 	return err
 }
 
-func (c *Collection) Search(m crudley.Model, fn crudley.ScannerFunc) (int, error) {
+func (c *Collection) Search(ctx context.Context, m crudley.Model, fn crudley.ScannerFunc) (int, error) {
 	return 0, errors.New("not implemented")
 }
 
 func (c *Collection) Query() crudley.Query {
 	return &Query{
 		col:   c.col,
-		ctx:   c.ctx,
 		Model: c.Model,
 		q:     c.col.Query,
 	}
@@ -120,7 +117,6 @@ func (c *Collection) Query() crudley.Query {
 type Query struct {
 	col   *firestore.CollectionRef
 	Model crudley.Model
-	ctx   context.Context
 	q     firestore.Query
 }
 
@@ -162,9 +158,9 @@ func (q *Query) Sort(by string) {
 	q.q = q.q.OrderBy(field, sort)
 }
 
-func (q *Query) Execute() ([]crudley.Model, error) {
+func (q *Query) Execute(ctx context.Context) ([]crudley.Model, error) {
 	out := []crudley.Model{}
-	iter := q.q.Documents(q.ctx)
+	iter := q.q.Documents(ctx)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {

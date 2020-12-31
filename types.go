@@ -1,6 +1,7 @@
 package crudley
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -27,18 +28,18 @@ type Model interface {
 type Collection interface {
 	// View retrieves a model from the Collection and deserializes it into the
 	// provided Model instance
-	View(id string) (Model, error)
+	View(ctx context.Context, id string) (Model, error)
 	// Update an existing model in the collection
-	Update(id string, m Model) error
+	Update(ctx context.Context, id string, m Model) error
 	// Delete removes a model from the collection
-	Delete(id string) error
+	Delete(ctx context.Context, id string) error
 	// Scan iterates through all Models in the collection, running the provided
 	// ScannerFunc on each serialized Model
-	Scan(ScannerFunc) error
+	Scan(ctx context.Context, fn ScannerFunc) error
 	// Create handles creating a new model
-	Create(CreaterFunc) error
+	Create(ctx context.Context, fn CreaterFunc) error
 	// Search accepts a partial Model and a ScannerFunc to query on alternate indexes
-	Search(Model, ScannerFunc) (int, error)
+	Search(ctx context.Context, m Model, fn ScannerFunc) (int, error)
 	// Query retrieves an object that can be used to perform advanced queries on the Store
 	Query() Query
 }
@@ -53,7 +54,7 @@ type Query interface {
 	Skip(int)
 	Sort(string)
 	Has(string)
-	Execute() ([]Model, error)
+	Execute(ctx context.Context) ([]Model, error)
 }
 
 // Store represents a storage service for Models, this generally does not need to

@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"context"
 	"fmt"
 
 	"gopkg.in/mgo.v2"
@@ -56,7 +57,7 @@ type Collection struct {
 }
 
 // View retrieves a single crudley.Model from the Collection
-func (c *Collection) View(id string) (crudley.Model, error) {
+func (c *Collection) View(ctx context.Context, id string) (crudley.Model, error) {
 	if id == "" {
 		return nil, fmt.Errorf("you must specify a Model id")
 	}
@@ -77,7 +78,7 @@ func idmap(id string) map[string]string {
 }
 
 // Update an existing crudley.Model in the Collection
-func (c *Collection) Update(id string, m crudley.Model) error {
+func (c *Collection) Update(ctx context.Context, id string, m crudley.Model) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
 	}
@@ -89,7 +90,7 @@ func (c *Collection) Update(id string, m crudley.Model) error {
 }
 
 // Delete a crudley.Model from the Collection
-func (c *Collection) Delete(id string) error {
+func (c *Collection) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return fmt.Errorf("you must specify a model id")
 	}
@@ -102,7 +103,7 @@ func (c *Collection) Delete(id string) error {
 
 // Scan accepts a function to run on the serialized version of every crudley.Model
 // in the collection
-func (c *Collection) Scan(scanFn crudley.ScannerFunc) error {
+func (c *Collection) Scan(ctx context.Context, scanFn crudley.ScannerFunc) error {
 	query := c.col.Find(bson.M{})
 	iter := query.Iter()
 	m := c.Model.New("")
@@ -119,7 +120,7 @@ func (c *Collection) Scan(scanFn crudley.ScannerFunc) error {
 // Search accepts a partial crudley.Model as a query parameter and applies the passed
 // crudley.ScannerFunc to the resulting set. This implementation supports secondary
 // indexes, so make sure the partial fields are indexed by the crudley.Model.Index()
-func (c *Collection) Search(partial crudley.Model, scanner crudley.ScannerFunc) (int, error) {
+func (c *Collection) Search(ctx context.Context, partial crudley.Model, scanner crudley.ScannerFunc) (int, error) {
 	query := c.col.Find(partial)
 	total, err := query.Count()
 	if err != nil {
@@ -138,7 +139,7 @@ func (c *Collection) Search(partial crudley.Model, scanner crudley.ScannerFunc) 
 }
 
 // Create accepts a creation function to add a new crudley.Model to the collection
-func (c *Collection) Create(createFn crudley.CreaterFunc) error {
+func (c *Collection) Create(ctx context.Context, createFn crudley.CreaterFunc) error {
 	id := c.id()
 	m, err := createFn(id)
 	if err != nil {
@@ -231,7 +232,7 @@ func (q *Query) Sort(by string) {
 }
 
 // Execute runs the Query
-func (q *Query) Execute() ([]crudley.Model, error) {
+func (q *Query) Execute(ctx context.Context) ([]crudley.Model, error) {
 	mdls := []crudley.Model{}
 	query := q.col.Find(q.m)
 	if q.limit != 0 {

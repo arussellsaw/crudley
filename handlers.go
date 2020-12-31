@@ -79,6 +79,7 @@ func (p *Path) initHandler() (Collection, *Response, error) {
 
 // Query accepts a partial model and looks up the result
 func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	c, res, err := p.initHandler()
 	if err != nil {
 		return
@@ -92,7 +93,7 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 		res.SetStatusCode(http.StatusBadRequest)
 		return
 	}
-	models, err := q.Execute()
+	models, err := q.Execute(ctx)
 	if err != nil {
 		res.AddError(fmt.Errorf("unexpected error: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
@@ -113,6 +114,7 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 
 // Get is the http handler for the GET method
 func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	c, res, err := p.initHandler()
 	if err != nil {
 		return
@@ -127,7 +129,7 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	model, err := c.View(id)
+	model, err := c.View(ctx, id)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to retrieve Model from collection: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
@@ -155,6 +157,7 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 
 // Post saves a Model to the Store
 func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	c, res, err := p.initHandler()
 	if err != nil {
 		return
@@ -162,7 +165,7 @@ func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
 	defer WriteResponse(w, res)
 
 	var out Model
-	err = c.Create(func(id string) (Model, error) {
+	err = c.Create(ctx, func(id string) (Model, error) {
 		out = p.Model.New(id)
 
 		err := json.NewDecoder(r.Body).Decode(&RestrictedModel{out})
@@ -190,6 +193,7 @@ func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
 
 // Put handles partial JSON to update a Model
 func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	c, res, err := p.initHandler()
 	if err != nil {
 		return
@@ -204,7 +208,7 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := c.View(id)
+	m, err := c.View(ctx, id)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			res.AddError(ErrorModelNotFound)
@@ -224,14 +228,14 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if p.Hooks.Authorize != nil {
-		if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
+		if err := p.Hooks.Authorize(ctx, m, r); err != nil {
 			res.AddError(ErrorModelNotFound)
 			res.SetStatusCode(http.StatusNotFound)
 			return
 		}
 	}
 
-	err = c.Update(m.PrimaryKey(), m)
+	err = c.Update(ctx, m.PrimaryKey(), m)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to update Model: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
@@ -243,6 +247,7 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles deleting the Model specified by the mux var "id"
 func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	c, res, err := p.initHandler()
 	if err != nil {
 		return
@@ -256,7 +261,7 @@ func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := c.View(id)
+	m, err := c.View(ctx, id)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			res.AddError(ErrorModelNotFound)
@@ -282,7 +287,7 @@ func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
 
 	m.Delete()
 
-	err = c.Update(id, m)
+	err = c.Update(ctx, id, m)
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to update Collection with deleted Model: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestSetGet(store crudley.Store, t *testing.T) {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID string
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		modelID = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
@@ -29,7 +30,7 @@ func TestSetGet(store crudley.Store, t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	newModel, err := col.View(modelID)
+	newModel, err := col.View(context.Background(), modelID)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -50,20 +51,20 @@ func TestScan(store crudley.Store, t *testing.T) {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID1, modelID2 string
-	col.Create(func(id string) (crudley.Model, error) {
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		modelID1 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		return md, nil
 	})
-	col.Create(func(id string) (crudley.Model, error) {
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		modelID2 = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
 		return md, nil
 	})
 	var out = make(map[string]crudley.Model)
-	col.Scan(func(mdl crudley.Model) error {
+	col.Scan(context.Background(), func(mdl crudley.Model) error {
 		out[mdl.PrimaryKey()] = mdl
 		return nil
 	})
@@ -93,13 +94,13 @@ func TestUpdate(store crudley.Store, t *testing.T) {
 		t.Fatalf("expected nil, got %s", err)
 	}
 	var modelID string
-	col.Create(func(id string) (crudley.Model, error) {
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		modelID = id
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		return md, nil
 	})
-	newModel, err := col.View(modelID)
+	newModel, err := col.View(context.Background(), modelID)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -111,11 +112,11 @@ func TestUpdate(store crudley.Store, t *testing.T) {
 		t.Fatalf("expected testing123, got %s", ntm.Val)
 	}
 	ntm.Val = "testing1234"
-	err = col.Update(modelID, ntm)
+	err = col.Update(context.Background(), modelID, ntm)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	newModel, err = col.View(modelID)
+	newModel, err = col.View(context.Background(), modelID)
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
@@ -134,21 +135,18 @@ func TestSearch(store crudley.Store, t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	var modelID1, modelID2 string
-	col.Create(func(id string) (crudley.Model, error) {
-		modelID1 = id
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		return md, nil
 	})
-	col.Create(func(id string) (crudley.Model, error) {
-		modelID2 = id
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
 		return md, nil
 	})
 	var out *TestModel
-	col.Search(&TestModel{Val: "testing123"}, func(mdl crudley.Model) error {
+	col.Search(context.Background(), &TestModel{Val: "testing123"}, func(mdl crudley.Model) error {
 		out = mdl.(*TestModel)
 		return nil
 	})
@@ -163,17 +161,14 @@ func TestQuery(store crudley.Store, t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	var modelID1, modelID2 string
-	col.Create(func(id string) (crudley.Model, error) {
-		modelID1 = id
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		md := model.New(id)
 		md.(*TestModel).Val = "testing123"
 		md.(*TestModel).Count = 0
 		md.(*TestModel).EmbeddedField = "embed"
 		return md, nil
 	})
-	col.Create(func(id string) (crudley.Model, error) {
-		modelID2 = id
+	col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		md := model.New(id)
 		md.(*TestModel).Val = "testing1234"
 		md.(*TestModel).Count = 3
@@ -181,7 +176,7 @@ func TestQuery(store crudley.Store, t *testing.T) {
 	})
 	q := col.Query()
 	q.GreaterThan("count", 2)
-	res, err := q.Execute()
+	res, err := q.Execute(context.Background())
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -193,7 +188,7 @@ func TestQuery(store crudley.Store, t *testing.T) {
 	}
 	q = col.Query()
 	q.Equal("embedded_field", "embed")
-	res, err = q.Execute()
+	res, err = q.Execute(context.Background())
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}

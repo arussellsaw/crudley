@@ -1,6 +1,7 @@
 package mem
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 
@@ -35,12 +36,12 @@ type Collection struct {
 }
 
 // Update an existing Model in the memdb
-func (c *Collection) Update(id string, model crudley.Model) error {
+func (c *Collection) Update(ctx context.Context, id string, model crudley.Model) error {
 	return c.col.Set(id, model)
 }
 
 // Create creates a new instance of the Model, and saves it to the Collection
-func (c *Collection) Create(crFunc crudley.CreaterFunc) error {
+func (c *Collection) Create(ctx context.Context, crFunc crudley.CreaterFunc) error {
 	id := c.id()
 	mdl, err := crFunc(id)
 	if err != nil {
@@ -51,12 +52,12 @@ func (c *Collection) Create(crFunc crudley.CreaterFunc) error {
 }
 
 // Delete removes a Model from the collection
-func (c *Collection) Delete(id string) error {
+func (c *Collection) Delete(ctx context.Context, id string) error {
 	return c.col.Remove(id)
 }
 
 // Scan iterates over all items in the collection from memdb
-func (c *Collection) Scan(scanner crudley.ScannerFunc) error {
+func (c *Collection) Scan(ctx context.Context, scanner crudley.ScannerFunc) error {
 	for _, doc := range c.col.AllRaw() {
 		m := c.model.New("")
 		err := json.Unmarshal(doc, m)
@@ -74,10 +75,10 @@ func (c *Collection) Scan(scanner crudley.ScannerFunc) error {
 // Search accepts a partial model as a query, scans the Collection, passing all
 // matched Models to the crudley.ScannerFunc. this Store implementation does not
 // support secondary indexes
-func (c *Collection) Search(partialModel crudley.Model, scanner crudley.ScannerFunc) (int, error) {
+func (c *Collection) Search(ctx context.Context, partialModel crudley.Model, scanner crudley.ScannerFunc) (int, error) {
 	var found bool
 	var count int
-	err := c.Scan(crudley.ScannerFunc(func(scanModel crudley.Model) error {
+	err := c.Scan(ctx, crudley.ScannerFunc(func(scanModel crudley.Model) error {
 		count++
 		found = true
 		sModelValue := reflect.ValueOf(scanModel).Elem()
@@ -104,7 +105,7 @@ func (c *Collection) Search(partialModel crudley.Model, scanner crudley.ScannerF
 }
 
 // View retrieves a Model from the memdb
-func (c *Collection) View(id string) (crudley.Model, error) {
+func (c *Collection) View(ctx context.Context, id string) (crudley.Model, error) {
 	mdl := c.model.New(id)
 	found, err := c.col.Doc(id, mdl)
 	if !found {
@@ -165,10 +166,10 @@ func (q *Query) Sort(by string) {
 }
 
 // Execute runs the Query
-func (q *Query) Execute() ([]crudley.Model, error) {
+func (q *Query) Execute(ctx context.Context) ([]crudley.Model, error) {
 	var out []crudley.Model
 	var i int
-	q.col.Scan(func(m crudley.Model) error {
+	q.col.Scan(ctx, func(m crudley.Model) error {
 		i++
 		if i < q.skip {
 			return nil

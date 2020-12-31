@@ -1,6 +1,7 @@
 package crudley_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -106,7 +107,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		m := &model.TestModel{
 			ID:        id,
 			StringVal: "model1",
@@ -118,7 +119,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	err = col.Create(func(id string) (crudley.Model, error) {
+	err = col.Create(context.Background(), func(id string) (crudley.Model, error) {
 		m := &model.TestModel{
 			ID:        id,
 			StringVal: "model2",
@@ -138,7 +139,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdls, err := q.Execute()
+	mdls, err := q.Execute(context.Background())
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -165,7 +166,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdls, err = q.Execute()
+	mdls, err = q.Execute(context.Background())
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
@@ -192,7 +193,7 @@ func TestUnmarshalGetQuery(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	mdls, err = q.Execute()
+	mdls, err = q.Execute(context.Background())
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
