@@ -22,6 +22,14 @@ type Model interface {
 	IsDeleted() bool
 }
 
+type Authoriser interface {
+	Authorise(ctx context.Context, action Action) error
+}
+
+type Action struct {
+	Method string
+}
+
 // Collection represents a set of Models from a Store. this handles Model creation
 // and Modification. it also usually contains a connection or collection instance
 // from things like mongodb, so may contain state. this should be checked before usage

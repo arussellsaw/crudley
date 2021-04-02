@@ -86,6 +86,7 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 	}
 	defer WriteResponse(w, res)
 	out := p.Model.New("")
+
 	q := c.Query()
 	err = UnmarshalGetQuery(r, out, q)
 	if err != nil {
@@ -93,6 +94,7 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 		res.SetStatusCode(http.StatusBadRequest)
 		return
 	}
+
 	models, err := q.Execute(ctx)
 	if err != nil {
 		res.AddError(fmt.Errorf("unexpected error: %s", err.Error()))
@@ -100,15 +102,7 @@ func (p *Path) Query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, m := range models {
-		// this is probably bad
-		if p.Hooks.Authorize != nil {
-			if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
-				continue
-			}
-		}
-		if !m.IsDeleted() {
-			res.AddModel(m)
-		}
+		res.AddModel(m)
 	}
 }
 
@@ -140,9 +134,9 @@ func (p *Path) Get(w http.ResponseWriter, r *http.Request) {
 		res.SetStatusCode(http.StatusNotFound)
 		return
 	}
-	if p.Hooks.Authorize != nil {
-		if err := p.Hooks.Authorize(r.Context(), model, r); err != nil {
-			res.AddError(ErrorModelNotFound)
+	if a, ok := model.(Authoriser); ok {
+		if err := a.Authorise(ctx, Action{Method: http.MethodGet}); err != nil {
+			res.AddError(err)
 			res.SetStatusCode(http.StatusNotFound)
 		}
 	}
@@ -173,10 +167,10 @@ func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
 			return out, err
 		}
 
-		if p.Hooks.Authorize != nil {
-			if err := p.Hooks.Authorize(r.Context(), out, r); err != nil {
-				res.AddError(ErrorModelNotFound)
-				res.SetStatusCode(http.StatusNotFound)
+		if a, ok := out.(Authoriser); ok {
+			if err := a.Authorise(ctx, Action{Method: http.MethodPost}); err != nil {
+				res.SetStatusCode(http.StatusUnauthorized)
+				return out, err
 			}
 		}
 
@@ -184,7 +178,9 @@ func (p *Path) Post(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		res.AddError(fmt.Errorf("failed to create Model: %s", err.Error()))
-		res.SetStatusCode(http.StatusInternalServerError)
+		if res.GetStatusCode() == 0 {
+			res.SetStatusCode(http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -220,19 +216,19 @@ func (p *Path) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if a, ok := m.(Authoriser); ok {
+		if err := a.Authorise(ctx, Action{Method: http.MethodPut}); err != nil {
+			res.AddError(err)
+			res.SetStatusCode(http.StatusUnauthorized)
+			return
+		}
+	}
+
 	err = json.NewDecoder(r.Body).Decode(&RestrictedModel{m})
 	if err != nil {
 		res.AddError(ErrorMalformedJSON)
 		res.SetStatusCode(http.StatusBadRequest)
 		return
-	}
-
-	if p.Hooks.Authorize != nil {
-		if err := p.Hooks.Authorize(ctx, m, r); err != nil {
-			res.AddError(ErrorModelNotFound)
-			res.SetStatusCode(http.StatusNotFound)
-			return
-		}
 	}
 
 	err = c.Update(ctx, m.PrimaryKey(), m)
@@ -277,19 +273,17 @@ func (p *Path) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if p.Hooks.Authorize != nil {
-		if err := p.Hooks.Authorize(r.Context(), m, r); err != nil {
-			res.AddError(ErrorModelNotFound)
-			res.SetStatusCode(http.StatusNotFound)
+	if a, ok := m.(Authoriser); ok {
+		if err := a.Authorise(ctx, Action{Method: http.MethodDelete}); err != nil {
+			res.AddError(err)
+			res.SetStatusCode(http.StatusUnauthorized)
 			return
 		}
 	}
 
-	m.Delete()
-
-	err = c.Update(ctx, id, m)
+	err = c.Delete(ctx, id)
 	if err != nil {
-		res.AddError(fmt.Errorf("failed to update Collection with deleted Model: %s", err.Error()))
+		res.AddError(fmt.Errorf("failed to delete Model: %s", err.Error()))
 		res.SetStatusCode(http.StatusInternalServerError)
 		return
 	}

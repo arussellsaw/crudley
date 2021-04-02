@@ -1,10 +1,13 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"github.com/arussellsaw/crudley"
 )
+
+var AuthoriseFunc func(ctx context.Context, action crudley.Action, m *TestModel) error
 
 // TestModel is a testing implementation of the Model interface
 type TestModel struct {
@@ -15,6 +18,8 @@ type TestModel struct {
 	BoolVal   *bool     `json:"bool_val" bson:"bool_val,omitempty"`
 	Deleted   bool      `json:"deleted" bson:"deleted,omitempty"`
 	StructVal StructVal `json:"struct_val"`
+
+	Owner string `json:"owner"`
 }
 
 type StructVal struct {
@@ -44,6 +49,13 @@ func (m *TestModel) Delete() {
 // IsDeleted returns the deleted status of the Model
 func (m *TestModel) IsDeleted() bool {
 	return m.Deleted
+}
+
+func (m *TestModel) Authorise(ctx context.Context, action crudley.Action) error {
+	if AuthoriseFunc == nil {
+		return nil
+	}
+	return AuthoriseFunc(ctx, action, m)
 }
 
 // TestModelResponse is a response implementation for easy testing of the http

@@ -30,6 +30,7 @@ func setUpTestPath() (*mux.Router, *crudley.Path, error) {
 		&model.TestModel{
 			StringVal: "model1",
 			IntVal:    1,
+			Owner: 	   "foo",
 		},
 		&model.TestModel{
 			StringVal: "model2",
@@ -37,22 +38,27 @@ func setUpTestPath() (*mux.Router, *crudley.Path, error) {
 			StructVal: model.StructVal{
 				"foo",
 			},
+			Owner: 	   "foo",
 		},
 		&model.TestModel{
 			StringVal: "model3",
 			IntVal:    3,
+			Owner: 	   "foo",
 		},
 		&model.TestModel{
 			StringVal: "model4",
 			IntVal:    4,
+			Owner: 	   "bar",
 		},
 		&model.TestModel{
 			StringVal: "model5",
 			IntVal:    5,
+			Owner: 	   "bar",
 		},
 		&model.TestModel{
 			StringVal: "model6",
 			IntVal:    6,
+			Owner: 	   "bar",
 		},
 	}
 	for _, mdl := range testModels {
@@ -257,5 +263,59 @@ func TestDELETE(t *testing.T) {
 	}
 	if !mdl.IsDeleted() {
 		t.Errorf("expected true, got false")
+	}
+}
+
+func TestAuthoriseGET(t *testing.T) {
+	model.AuthoriseFunc = func(ctx context.Context, action crudley.Action, m *model.TestModel) error {
+		// empty searches become filtered to owner
+		if m.Owner == "" {
+			m.Owner = "foo"
+		}
+		if m.Owner != "foo" {
+			// can't list for owners other than yourself
+			return fmt.Errorf("unauthorised!")
+		}
+		return nil
+	}
+	defer func() {model.AuthoriseFunc = nil}()
+	r, _, err := setUpTestPath()
+	if err != nil {
+		t.Fatalf("expected nil, got %s", err)
+	}
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	// list using empty query, Authorise should append query params to prevent listing everything
+	tmr, err := testHandler("GET", fmt.Sprintf("%s/api/test/", s.URL), nil)
+	if err != nil {
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
+	}
+	if len(tmr.Models) != 3 {
+		t.Errorf("expected 3, got %v", len(tmr.Models))
+	}
+	tmr, err = testHandler("GET", fmt.Sprintf("%s/api/test/?string_val=model3", s.URL), nil)
+	if err != nil {
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
+	}
+	if len(tmr.Models) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Models))
+		return
+	}
+	if tmr.Models[0].StringVal != "model3" {
+		t.Errorf("expected model3, got %s", tmr.Models[0].StringVal)
+	}
+
+	// try and get list for models we don't own
+	tmr, err = testHandler("GET", fmt.Sprintf("%s/api/test/?owner=bar", s.URL), nil)
+	if err != nil {
+		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
+	}
+	if len(tmr.Errors) == 0 {
+		t.Errorf("expected some errors, got none")
+	}
+	if len(tmr.Models) != 0 {
+		t.Errorf("expected 0, got %v", len(tmr.Models))
+		return
 	}
 }

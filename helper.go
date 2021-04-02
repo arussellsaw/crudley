@@ -55,6 +55,17 @@ func UnmarshalMultiQuery(r *http.Request, m Model) ([]Model, error) {
 			}
 		}
 	}
+	if len(mdls) == 0 {
+		// if no models are added, we should create one to run authorisation against
+		mdls = append(mdls, m.New(""))
+	}
+	for _, mdl := range mdls {
+		if a, ok := mdl.(Authoriser); ok {
+			if err := a.Authorise(r.Context(), Action{Method: http.MethodGet}); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return mdls, nil
 }
 
@@ -175,6 +186,8 @@ func UnmarshalGetQuery(r *http.Request, m Model, q Query) error {
 	newURL := *r.URL
 	newQuery := newURL.Query()
 	for key, val := range r.URL.Query() {
+		// if we're using any operators (_before _after _lessthan _greaterthan)
+		// then we parse them into a dedicated operators map with their raw field name
 		for suffix, operator := range queryMap {
 			if strings.HasSuffix(key, suffix) {
 				shortKey := key[:len(key)-len(suffix)]
