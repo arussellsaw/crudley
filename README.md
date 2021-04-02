@@ -2,9 +2,9 @@
 
 Crudley is a Go library for building CRUD REST APIs on top of document stores. The goal of the project is to make it less labour intensive to build simple APIs, and allow developers to focus on building important stuff. 
 
-The project works by using a core `crudley.Model` interface, which provides the library with the basic functions needed to create, read, update, and delete data. The stores are also implemented via a `crudley.Store` interface, which means the database backend can easily be swapped by creating a new `crudley.Store` interface. 
+The project works by having your types implement a `crudley.Model` interface, which provides the library with the basic functions needed to create, read, update, and delete data. The stores are also implemented via a `crudley.Store` interface, which means the database backend can easily be swapped by creating a new `crudley.Store` implementation, or wrapping an existing one.
 
-There are a couple of different places where the functionality of crudley, but generally i'd recommend writing bespoke API handlers if you want advanced functionality.
+There are a couple of different places where you can extend the functionality of crudley, but generally i'd recommend writing bespoke API handlers if you want advanced functionality.
 
 * Hooks, these are functions called by the handlers at certain points in the request lifecycle, at the moment only `Hooks.Authorize` is supported for checking authorization.
 
