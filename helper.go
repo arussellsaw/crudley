@@ -3,6 +3,7 @@ package crudley
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/structs"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -46,7 +47,12 @@ func UnmarshalMultiQuery(r *http.Request, m Model) ([]Model, error) {
 	for key, val := range r.URL.Query() {
 		for i, s := range val {
 			if len(mdls) < i+1 {
-				mdls = append(mdls, m.New(""))
+				mdl := m.New("")
+				err := zeroFields(mdl)
+				if err != nil {
+					return nil, err
+				}
+				mdls = append(mdls, mdl)
 			}
 			mValue := reflect.ValueOf(mdls[i]).Elem()
 			err := fillStructFields(key, s, mValue)
@@ -57,7 +63,12 @@ func UnmarshalMultiQuery(r *http.Request, m Model) ([]Model, error) {
 	}
 	if len(mdls) == 0 {
 		// if no models are added, we should create one to run authorisation against
-		mdls = append(mdls, m.New(""))
+		mdl := m.New("")
+		err := zeroFields(mdl)
+		if err != nil {
+			return nil, err
+		}
+		mdls = append(mdls, mdl)
 	}
 	for _, mdl := range mdls {
 		if a, ok := mdl.(Authoriser); ok {
@@ -67,6 +78,17 @@ func UnmarshalMultiQuery(r *http.Request, m Model) ([]Model, error) {
 		}
 	}
 	return mdls, nil
+}
+
+func zeroFields(v interface{}) error {
+	fs := structs.Fields(v)
+	for _, f := range fs {
+		err := f.Zero()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func fillStructFields(key string, val string, mValue reflect.Value) error {

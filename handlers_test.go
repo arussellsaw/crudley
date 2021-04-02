@@ -261,8 +261,8 @@ func TestDELETE(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
 	}
-	if !mdl.IsDeleted() {
-		t.Errorf("expected true, got false")
+	if mdl != nil {
+		t.Errorf("expected nil, got %v",mdl)
 	}
 }
 

@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go/firestore v1.3.0
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.8.0
