@@ -12,10 +12,14 @@ import (
 // ID is the commonly used mux.Var id param.
 const ID = "id"
 
-func NewPath(m Model, s Store) *Path {
+func NewPath(m Model, s Store, opt ...Option) *Path {
 	p := &Path{
 		Model: m,
 		Store: s,
+	}
+
+	for _, o := range opt {
+		o(p)
 	}
 
 	r := mux.NewRouter()
@@ -32,6 +36,12 @@ func NewPath(m Model, s Store) *Path {
 	p.r = r
 
 	return p
+}
+
+type Option func(p *Path)
+
+func OptionReadOnly(p *Path) {
+	p.ReadOnly = true
 }
 
 // Path manages building a set of RESTful endpoints for any given Model, using
