@@ -103,18 +103,18 @@ func TestGET(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 6 {
-		t.Errorf("expected 6, got %v", len(tmr.Models))
+	if len(tmr.Results) != 6 {
+		t.Errorf("expected 6, got %v", len(tmr.Results))
 	}
 	tmr, err = testHandler("GET", fmt.Sprintf("%s/api/test/?string_val=model6", s.URL), nil)
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Models))
+	if len(tmr.Results) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Results))
 	}
-	if tmr.Models[0].StringVal != "model6" {
-		t.Errorf("expected model6, got %s", tmr.Models[0].StringVal)
+	if tmr.Results[0].StringVal != "model6" {
+		t.Errorf("expected model6, got %s", tmr.Results[0].StringVal)
 	}
 }
 
@@ -144,17 +144,17 @@ func TestGETID(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Models))
+	if len(tmr.Results) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Results))
 	}
-	if tmr.Models[0].ID != mID {
-		t.Errorf("expected %s, got %s", mID, tmr.Models[0].ID)
+	if tmr.Results[0].ID != mID {
+		t.Errorf("expected %s, got %s", mID, tmr.Results[0].ID)
 	}
-	if tmr.Models[0].StringVal != "newmodel" {
-		t.Errorf("expected newmodel, got %s", tmr.Models[0].StringVal)
+	if tmr.Results[0].StringVal != "newmodel" {
+		t.Errorf("expected newmodel, got %s", tmr.Results[0].StringVal)
 	}
-	if tmr.Models[0].StructVal.Field != "foo" {
-		t.Errorf("expected newmodel, got %s", tmr.Models[0].StringVal)
+	if tmr.Results[0].StructVal.Field != "foo" {
+		t.Errorf("expected newmodel, got %s", tmr.Results[0].StringVal)
 	}
 }
 
@@ -170,10 +170,10 @@ func TestPOST(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Models))
+	if len(tmr.Results) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Results))
 	}
-	id := tmr.Models[0].ID
+	id := tmr.Results[0].ID
 	col, err := path.Store.Collection(&model.TestModel{})
 	if err != nil {
 		t.Errorf("expected nil, got %s", err)
@@ -291,19 +291,19 @@ func TestAuthoriseGET(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 3 {
-		t.Errorf("expected 3, got %v", len(tmr.Models))
+	if len(tmr.Results) != 3 {
+		t.Errorf("expected 3, got %v", len(tmr.Results))
 	}
 	tmr, err = testHandler("GET", fmt.Sprintf("%s/api/test/?string_val=model3", s.URL), nil)
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Models) != 1 {
-		t.Errorf("expected 1, got %v", len(tmr.Models))
+	if len(tmr.Results) != 1 {
+		t.Errorf("expected 1, got %v", len(tmr.Results))
 		return
 	}
-	if tmr.Models[0].StringVal != "model3" {
-		t.Errorf("expected model3, got %s", tmr.Models[0].StringVal)
+	if tmr.Results[0].StringVal != "model3" {
+		t.Errorf("expected model3, got %s", tmr.Results[0].StringVal)
 	}
 
 	// try and get list for models we don't own
@@ -311,11 +311,11 @@ func TestAuthoriseGET(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected nil, got %s - %s", err, string(tmr.RawResponse))
 	}
-	if len(tmr.Errors) == 0 {
+	if len(tmr.Error) == 0 {
 		t.Errorf("expected some errors, got none")
 	}
-	if len(tmr.Models) != 0 {
-		t.Errorf("expected 0, got %v", len(tmr.Models))
+	if len(tmr.Results) != 0 {
+		t.Errorf("expected 0, got %v", len(tmr.Results))
 		return
 	}
 }

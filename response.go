@@ -7,39 +7,36 @@ import (
 
 // Response is the container for all output of the REST handlers
 type Response struct {
-	ID      string
-	Models  []Model
-	Errors  []string
-	Code    int
-	Total   int
-	Message string
-	Error   string
+	Results  []Model `json:"results,omitempty"`
+	Error   string `json:"error,omitempty"`
+	code int
 }
 
 // SetStatusCode sets the http status code for the request
 func (r *Response) SetStatusCode(code int) {
-	r.Code = code
+	r.code = code
 }
 
 // GetStatusCode returns the set http status code for the response
 func (r *Response) GetStatusCode() int {
-	if r.Code == 0 {
+	if r.code == 0 {
 		return http.StatusOK
 	}
-	return r.Code
+	return r.code
 }
 
 // AddModel adds models to the Response
 func (r *Response) AddModel(models ...Model) {
-	r.Models = append(r.Models, models...)
+	r.Results = append(r.Results, models...)
 }
 
 // AddError adds errors to the response
 func (r *Response) AddError(errors ...error) {
 	for _, err := range errors {
-		r.Errors = append(r.Errors, err.Error())
-		// set main message to last error sent
-		r.Error = err.Error()
+		if r.Error != "" {
+			r.Error += ", "
+		}
+		r.Error += err.Error()
 	}
 }
 

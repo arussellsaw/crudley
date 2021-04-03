@@ -3,7 +3,6 @@ package crudley
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -66,9 +65,7 @@ func (p *Path) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // the response for the request
 func (p *Path) initHandler() (Collection, *Response, error) {
 	var (
-		res = &Response{
-			ID: uuid.New().String(),
-		}
+		res = &Response{}
 		err error
 	)
 

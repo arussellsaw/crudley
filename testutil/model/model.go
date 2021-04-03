@@ -62,6 +62,6 @@ func (m *TestModel) Authorise(ctx context.Context, action crudley.Action) error 
 // handlers
 type TestModelResponse struct {
 	RawResponse []byte
-	Models      []*TestModel
-	Errors      []string
+	Results     []*TestModel `json:"results"`
+	Error       string       `json:"error"`
 }
