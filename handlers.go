@@ -1,7 +1,6 @@
 package crudley
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -13,24 +12,24 @@ import (
 // ID is the commonly used mux.Var id param.
 const ID = "id"
 
-func NewPath(m Model, s Store, opts ...Option) *Path {
+func NewPath(m Model, s Store) *Path {
 	p := &Path{
 		Model: m,
 		Store: s,
 	}
 
 	r := mux.NewRouter()
+
 	r.Path("/").Methods("GET").HandlerFunc(p.Query)
-	r.Path("/").Methods("POST").HandlerFunc(p.Post)
 	r.Path("/{id}").Methods("GET").HandlerFunc(p.Get)
-	r.Path("/{id}").Methods("PUT").HandlerFunc(p.Put)
-	r.Path("/{id}").Methods("DELETE").HandlerFunc(p.Delete)
+
+	if !p.ReadOnly {
+		r.Path("/").Methods("POST").HandlerFunc(p.Post)
+		r.Path("/{id}").Methods("PUT").HandlerFunc(p.Put)
+		r.Path("/{id}").Methods("DELETE").HandlerFunc(p.Delete)
+	}
 
 	p.r = r
-
-	for _, opt := range opts {
-		opt(p)
-	}
 
 	return p
 }
@@ -45,14 +44,9 @@ type Path struct {
 
 	c Collection
 
-	Hooks Hooks
+	ReadOnly bool
 }
 
-type Hooks struct {
-	Authorize func(ctx context.Context, m Model, r *http.Request) error
-}
-
-type Option func(p *Path)
 
 func (p *Path) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.r.ServeHTTP(w, r)
